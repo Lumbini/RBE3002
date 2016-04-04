@@ -6,11 +6,11 @@ from std_msgs.msg import String
 from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, PoseWithCovarianceStamped
 from nav_msgs.msg import Odometry, OccupancyGrid
 from kobuki_msgs.msg import BumperEvent
+from Node import Node
 import tf
 import numpy
 import math 
 import rospy, tf, numpy, math
-
 
 
 # reads in global map
@@ -22,6 +22,7 @@ def mapCallBack(data):
     global resolution
     global offsetX
     global offsetY
+    global nodeGrid
     mapgrid = data
     resolution = data.info.resolution
     mapData = data.data
@@ -29,6 +30,15 @@ def mapCallBack(data):
     height = data.info.height
     offsetX = data.info.origin.position.x
     offsetY = data.info.origin.position.y
+    nodeGrid = []
+
+    for i in range(0, len(mapgrid) + 1):
+        prob = mapgrid[i]
+        ypos = math.floor(i / width)
+        xpos = index - (ypos * width)
+        node = Node(xpos, ypos, prob, width)
+        nodeGrid.append(node)
+
     print data.info
 
 def readGoal(goal):
@@ -49,7 +59,8 @@ def readStart(startPos):
     print startPos.pose.pose
 
 def aStar(start,goal):
-    pass
+
+    path = AStar(start, goal, nodeGrid)
     # create a new instance of the map
 
     # generate a path to the start and end goals by searching through the neighbors, refer to aStar_explanied.py
@@ -82,7 +93,20 @@ def publishCells(grid):
                 point.y=(i*resolution)+offsetY - (.5 * resolution) # added secondary offset ... Magic ?
                 point.z=0
                 cells.cells.append(point)
-    pub.publish(cells)           
+    pub.publish(cells)
+
+def publishPath(path):
+    global pubpath
+
+    cells = GridCells()
+    cells.header.frame_id = 'map'
+    cells.cell_width = resolution
+    cells.cell_height = resolution
+
+    for node in path:
+        xpos = node.x
+        ypos = node.y
+                   
 
 #Main handler of the project
 def run():

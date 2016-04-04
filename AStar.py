@@ -95,5 +95,5 @@ if __name__ == "__main__":
 
     ## very important for the order here... otherwise finding neighbors will break
     gridArr = [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12]
-    path = AStar(t1, t12, gridArr)
+    path = AStar(t4, t12, gridArr)
     print path
