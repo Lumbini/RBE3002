@@ -16,13 +16,17 @@ def constructPath(fromNode):
 	path = []
 	currentNode = fromNode
 
+	## traverse the parents to construct the list in backwards order
 	while currentNode.parent is not None:
-		print currentNode
 		path.append(currentNode)
 		currentNode = currentNode.parent
-		time.sleep(1) ## for testing purposes
+	path.append(currentNode)
 
-	return path.reverse()
+	## reverse the list
+	final = []
+	for x in reversed(path):
+		final.append(x)
+	return final
 
 ## finds path
 def AStar(start, goal, grid):
@@ -44,7 +48,6 @@ def AStar(start, goal, grid):
 
 		## if we're at the goal, return the path
 		if currentNode == goal:
-			print currentNode ## testing purposes 
 			return constructPath(currentNode)
 
 		## Transfer current node from frontiers to explored 
@@ -53,7 +56,7 @@ def AStar(start, goal, grid):
 
 		## go through the neighbors of the currentNode, trying to find the best next option to add to frontiers
 		for node in currentNode.getNeighbors(grid):
-			if node.parent == None:
+			if node.parent == None and node not in explored:
 				## Calculate the cost from current to new node and update the new node's parent
 				node.cost = currentNode.cost + manhattan(currentNode, node)	
 				node.parent = currentNode
@@ -91,5 +94,5 @@ if __name__ == "__main__":
 
     ## very important for the order here... otherwise finding neighbors will break
     gridArr = [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12]
-    print AStar(t1, t12, gridArr)
-
+    path = AStar(t1, t12, gridArr)
+    print path
