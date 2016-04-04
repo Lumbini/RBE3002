@@ -1,7 +1,7 @@
 import math
 import array
 from Node import Node
-import time ## TODO take out after consturct path is working
+import sys
 
 def heuristic(node1, node2):
 	## calculate the shortest distance between two nodes
@@ -28,7 +28,7 @@ def constructPath(fromNode):
 		final.append(x)
 	return final
 
-## finds path
+## A* algorithm
 def AStar(start, goal, grid):
 
 	## explored nodes and nodes to be explored
@@ -43,7 +43,8 @@ def AStar(start, goal, grid):
 
 		## sort frontiers and take the shortest'
 		## TODO need to find a way to sort this based on manhattan distance
-		frontiers.sort() 	
+		#frontiers.sort()
+		frontiers = sorted(frontiers, key=lambda Node: Node.cost)	
 		currentNode = frontiers[0]
 
 		## if we're at the goal, return the path
@@ -82,7 +83,7 @@ if __name__ == "__main__":
     t1 = Node(0, 0, 0, 4) 
     t2 = Node(0, 1, 1, 4)  
     t3 = Node(0, 2, 2, 4)  
-    t4 = Node(0, 3, 3, 4) 
+    t4 = Node(0, 3, 3, 4)
     t5 = Node(1, 0, 4, 4) 
     t6 = Node(1, 1, 5, 4) 
     t7 = Node(1, 2, 6, 4) 
