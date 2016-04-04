@@ -19,21 +19,18 @@ class Node:
     def getNeighbors(self, grid):
 
         neighbors = []
-        x = self.x - 1
-        y = self.y - 1
 
         ## for each x and y in the grid
         for x in range(self.x - 1, self.x + 2):
             for y in range(self.y - 1, self.y + 2):
                 ## if that coordinate is within the grid and is not self
-                if (x >= 0 and x <= self.width) and (y >= 0 and y <= (len(grid) / self.width)) and (self.x != x or self.y != y):
+                if (x >= 0 and x <= self.width) and (y >= 0 and y <= (len(grid) / self.width) - 1) and (x != self.x or y != self.y):
                     ## get that node
                     tempNode = self.getNode(x, y, grid)
                     ## if the node is not null, is not a wall, and is not unknown
                     if tempNode != None and tempNode.data != 100 and tempNode.data != -1:
                         ## append this node to our neighbors list
                         neighbors.append(tempNode)
-                        print "neighbor"
 
         ## return the neighbors list
         return neighbors
@@ -80,6 +77,6 @@ if __name__ == "__main__":
 
     ## very important for the order here... otherwise finding neighbors will break
     gridArr = [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12]
-    neighbors = t1.getNeighbors(gridArr)
+    neighbors = t3.getNeighbors(gridArr)
     for x in neighbors:
         print x
