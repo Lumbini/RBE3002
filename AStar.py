@@ -1,91 +1,95 @@
 import math
 import array
-
+from Node import Node
+import time ## TODO take out after consturct path is working
 
 def heuristic(node1, node2):
 	## calculate the shortest distance between two nodes
 	return (math.sqrt(math.pow((node2[0]-node1[0]), 2) + math.pow((node2[1]-node1[1]), 2)))
 
-## manhatten distance is just the sum of the difference in x and y
+## manhattan distance is just the sum of the difference in x and y
 def manhattan(node1, node2):
 	return (node1.x - node2.x) + (node1.y - node2.y)
 
 ## constructs the path
-def constructPath(fromNode, pathIn):
-	path = pathIn
-    path.append(fromNode) ## put this node in the list
+def constructPath(fromNode):
+	path = []
+	currentNode = fromNode
 
-	if fromNode.parentNode is not None:
-	    return constructPath(fromNode.parentNode, path) ## go to the parent and try again
-	else:
-	    pathIn.reverse()
-	    return pathIn
+	while currentNode.parent is not None:
+		print currentNode
+		path.append(currentNode)
+		currentNode = currentNode.parent
+		time.sleep(1) ## for testing purposes
+
+	return path.reverse()
 
 ## finds path
-def AStar(start, goal):
-	explored = []		## Nodes that need to be explored	
-	frontiers = []		## Nodes that can be pathed through
-	gScore = []			## Distance from the start of the node
-	fScore = []			## Estimated distance from start to the end goal
-	cameFrom = []		## Stores the parents of the nodes
-	counter = 1			## Keep track of the elements in GScore and FScore
+def AStar(start, goal, grid):
 
-	## initializing the gScore and fScore indices to infinity
-	gScore[:] = math.infinity
-	fScore[:] = math.infinity
+	## explored nodes and nodes to be explored
+	explored = []	
+	frontiers = [start]
 
-	gScore[start] = 0			
-	fScore[start] = heuristic(start, goal)
+	## cost for start is 0
+	start.cost = 0
 
-	while explored is not empty:
+	## while frontiers is not empty
+	while len(frontiers) > 0:
 
+		## sort frontiers and take the shortest'
+		## TODO need to find a way to sort this based on manhattan distance
 		frontiers.sort() 	
 		currentNode = frontiers[0]
 
+		## if we're at the goal, return the path
 		if currentNode == goal:
-			return constructPath(currentNode, )		#add in params
+			print currentNode ## testing purposes 
+			return constructPath(currentNode)
 
 		## Transfer current node from frontiers to explored 
-		frontiers.pop([0])		
+		frontiers.pop(0)		
 		explored.append(currentNode)
 
+		## go through the neighbors of the currentNode, trying to find the best next option to add to frontiers
+		for node in currentNode.getNeighbors(grid):
+			if node.parent == None:
+				## Calculate the cost from current to new node and update the new node's parent
+				node.cost = currentNode.cost + manhattan(currentNode, node)	
+				node.parent = currentNode
+				frontiers.append(node)
+			## else, new node has a parent... check if this cost is better than previous time we reached this node
+			## if it is, update the cost and parent to match
+			elif (currentNode.cost + manhattan(currentNode, node)) < node.cost:
+				node.cost = manhattan(currentNode, node) + current.cost
+				node.parent = currentNode
 
-		for node in adjacentNodes:
-			if node not in explored:
-				## Calculatethe heuristic from current to new node, and add to the temp gScore list
-				temp_gScore = gScore[start] + heuristic(currentNode, node)	
-
-				if node not in frontiers:
-					frontiers.append(node)
-
-				elif temp_gScore < gScore[counter]:
-					gScore[counter] = temp_gScore
-					fScore[counter] = temp_gScore + heuristic(node, goal)
-					cameFrom[counter] = currentNode
-					counter += 1
-
-
-					## UPDATE PATH
-
+	## if we reach the end with no return from constructPath, a path does not exist
 	return None
 
-	## returns the path from start to end
-	def constructPath(fromNode, pathIn): #start this by giving it a LocationNode and an empty list for path
-        path = pathIn
-        path.append(fromNode) #put this node in the list
 
-        if fromNode.parentNode is not None:
-            return constructPath(fromNode.parentNode, path) #go to the parent and try again
-        else:
-            pathIn.reverse()
-            return pathIn
+## main for testing purposes
+if __name__ == "__main__":
+         
+    ## test grid layout         
+    ## 0  1   2   3
+    ## 4  5   6   7
+    ## 8  9  10  11
 
+    t1 = Node(0, 0, 0, 4) 
+    t2 = Node(0, 1, 1, 4)  
+    t3 = Node(0, 2, 2, 4)  
+    t4 = Node(0, 3, 3, 4) 
+    t5 = Node(1, 0, 4, 4) 
+    t6 = Node(1, 1, 5, 4) 
+    t7 = Node(1, 2, 6, 4) 
+    t8 = Node(1, 3, 7, 4)
+    t9 = Node(2, 0, 8, 4)
+    t10 = Node(2, 1, 9, 4)
+    t11 = Node(2, 2, 10, 4)
+    t12 = Node(2, 3, 11, 4)
 
-
-
-
-
-
-
-
+    ## very important for the order here... otherwise finding neighbors will break
+    gridArr = [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12]
+    print AStar(t1, t12, gridArr)
 
