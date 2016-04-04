@@ -10,8 +10,7 @@ import tf
 import numpy
 import math 
 import rospy, tf, numpy, math
-
-
+from Node import Node
 
 # reads in global map
 def mapCallBack(data):
@@ -22,6 +21,7 @@ def mapCallBack(data):
     global resolution
     global offsetX
     global offsetY
+    global nodeGrid
     mapgrid = data
     resolution = data.info.resolution
     mapData = data.data
@@ -29,34 +29,60 @@ def mapCallBack(data):
     height = data.info.height
     offsetX = data.info.origin.position.x
     offsetY = data.info.origin.position.y
+    nodeGrid = []
+
+    for i in range(0, len(mapData)):
+        prob = mapData[i]
+        ypos = math.floor(i / width)
+        xpos = i - (ypos * width)
+        node = Node(xpos, ypos, prob, width)
+        nodeGrid.append(node)
+
     print data.info
 
 def readGoal(goal):
     global goalX
     global goalY
+
+    ##NEED A BETTER WAY TO FIX THIS 
     goalX= goal.pose.position.x
     goalY= goal.pose.position.y
+
+
+
+    indexGoal = math.floor(goalX + (goalY*width))
+    print "goalX: %d , goalY: %d, indexGoal: %f, mapData[]: %f, width: %f" % (goalX, goalY, indexGoal, mapData[indexGoal] , width)
+    #COnvert the goal to a Node object
+    goalNode = Node(goalX, goalY, mapData[indexGoal], width)
+    AStar(startPosNode, goalNode, nodeGrid)
     print goal.pose
-    # Start Astar
+
 
 
 def readStart(startPos):
-
     global startPosX
     global startPosY
+    global startPosNode
+
+    indexStart = startPosX + (startPosY * width)
     startPosX = startPos.pose.pose.position.x
     startPosY = startPos.pose.pose.position.y
+    
+    #Cconvert start node to a Node Object. 
+    startPosNode = Node(startPosX, StartPosY, mapData[indexStart], width)
     print startPos.pose.pose
 
-def aStar(start,goal):
-    pass
-    # create a new instance of the map
+def publishPath(path):
+    global pubpath
 
-    # generate a path to the start and end goals by searching through the neighbors, refer to aStar_explanied.py
+    cells = GridCells()
+    cells.header.frame_id = 'map'
+    cells.cell_width = resolution
+    cells.cell_height = resolution
 
-    # for each node in the path, process the nodes to generate GridCells and Path messages
-
-    # Publish points
+    for node in path:
+        xpos = node.x
+        ypos = node.y
 
 #publishes map to rviz using gridcells type
 
@@ -97,14 +123,11 @@ def run():
 
     # wait a second for publisher, subscribers, and TF
     rospy.sleep(1)
-    print ("hey")
-
 
     while (1 and not rospy.is_shutdown()):
         publishCells(mapData) #publishing map data every 2 seconds
         rospy.sleep(2)  
         print("Complete")
-    
 
 
 if __name__ == '__main__':
