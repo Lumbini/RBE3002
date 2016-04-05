@@ -65,7 +65,7 @@ def AStar(start, goal, grid):
 			## else, new node has a parent... check if this cost is better than previous time we reached this node
 			## if it is, update the cost and parent to match
 			elif (currentNode.cost + manhattan(currentNode, node)) < node.cost:
-				node.cost = manhattan(currentNode, node) + current.cost
+				node.cost = manhattan(currentNode, node) + currentNode.cost
 				node.parent = currentNode
 
 	## if we reach the end with no return from constructPath, a path does not exist

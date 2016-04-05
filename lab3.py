@@ -45,9 +45,10 @@ def mapCallBack(data):
 def readGoal(goal):
     global goalX
     global goalY
+    print 'hi'
  
-    goalX= goal.pose.position.x
-    goalY= goal.pose.position.y
+    goalX = goal.pose.position.x / resolution
+    goalY = goal.pose.position.y / resolution
 
     indexGoal = int(math.floor(goalX + (goalY*width)))
 
@@ -55,7 +56,7 @@ def readGoal(goal):
     goalNode = Node(goalX, goalY, mapData[indexGoal], width)
     thisPath = AStar.AStar(startPosNode, goalNode, nodeGrid)
     print "path from: ", startPosNode, " to ", goalNode, ": ", thisPath
-    print goal.pose
+    print "goal", goal.pose
 
 
 
@@ -64,13 +65,13 @@ def readStart(startPos):
     global startPosY
     global startPosNode
 
-    startPosX = startPos.pose.pose.position.x
-    startPosY = startPos.pose.pose.position.y
+    startPosX = startPos.pose.pose.position.x / resolution
+    startPosY = startPos.pose.pose.position.y / resolution
     indexStart = int(math.floor(startPosX + (startPosY * width)))
     
     #Cconvert start node to a Node Object. 
     startPosNode = Node(startPosX, startPosY, mapData[indexStart], width)
-    print startPos.pose.pose
+    print "start ", startPos.pose.pose
 
 def publishPath(path):
     global pubpath
@@ -131,8 +132,8 @@ def run():
     pub = rospy.Publisher("/map_check", GridCells, queue_size=1)  
     pubpath = rospy.Publisher("/path", GridCells, queue_size=1) # you can use other types if desired
     pubway = rospy.Publisher("/waypoints", GridCells, queue_size=1)
-    goal_sub = rospy.Subscriber('move_base_simple/goal', PoseStamped, readGoal, queue_size=1) #change topic for best results
-    start_sub = rospy.Subscriber('initialpose', PoseWithCovarianceStamped, readStart, queue_size=1) #change topic for best results
+    goal_sub = rospy.Subscriber('goal_lab3', PoseStamped, readGoal, queue_size=1) #change topic for best results
+    start_sub = rospy.Subscriber('initpose', PoseWithCovarianceStamped, readStart, queue_size=1) #change topic for best results
 
     # wait a second for publisher, subscribers, and TF
     rospy.sleep(1)
