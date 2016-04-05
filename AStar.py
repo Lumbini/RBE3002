@@ -9,7 +9,7 @@ def heuristic(node1, node2):
 
 ## manhattan distance is just the sum of the difference in x and y
 def manhattan(node1, node2):
-	return (node1.x - node2.x) + (node1.y - node2.y)
+	return abs((node1.x - node2.x)) + abs((node1.y - node2.y))
 
 ## constructs the path
 def constructPath(fromNode):
@@ -21,11 +21,13 @@ def constructPath(fromNode):
 		path.append(currentNode)
 		currentNode = currentNode.parent
 	path.append(currentNode)
-
+	print "path is ", path
+	return path
 	## reverse the list
 	final = []
 	for x in reversed(path):
 		final.append(x)
+	print "final path is ", final
 	return final
 
 ## A* algorithm
@@ -48,15 +50,18 @@ def AStar(start, goal, grid):
 		currentNode = frontiers[0]
 
 		## if we're at the goal, return the path
-		if currentNode == goal:
+		if currentNode.x == goal.x and currentNode.y == goal.y:
+			print "ABOUT TO CONSTRUCT THE PATH"
 			return constructPath(currentNode)
 
 		## Transfer current node from frontiers to explored 
 		frontiers.pop(0)		
 		explored.append(currentNode)
 
+		neighbors = currentNode.getNeighbors(grid)
 		## go through the neighbors of the currentNode, trying to find the best next option to add to frontiers
-		for node in currentNode.getNeighbors(grid):
+		for node in neighbors:
+			print "neighbors array: ", neighbors
 			if node.parent == None and node not in explored:
 				## Calculate the cost from current to new node and update the new node's parent
 				node.cost = currentNode.cost + manhattan(currentNode, node)	
@@ -67,6 +72,7 @@ def AStar(start, goal, grid):
 			elif (currentNode.cost + manhattan(currentNode, node)) < node.cost:
 				node.cost = manhattan(currentNode, node) + currentNode.cost
 				node.parent = currentNode
+				frontiers.append(node)
 
 	## if we reach the end with no return from constructPath, a path does not exist
 	return None

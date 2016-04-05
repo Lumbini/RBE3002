@@ -47,8 +47,8 @@ def readGoal(goal):
     global goalY
     print 'hi'
  
-    goalX = goal.pose.position.x / resolution
-    goalY = goal.pose.position.y / resolution
+    goalX = int(goal.pose.position.x / resolution)
+    goalY = int(goal.pose.position.y / resolution)
 
     indexGoal = int(math.floor(goalX + (goalY*width)))
 
@@ -57,6 +57,7 @@ def readGoal(goal):
     thisPath = AStar.AStar(startPosNode, goalNode, nodeGrid)
     print "path from: ", startPosNode, " to ", goalNode, ": ", thisPath
     print "goal", goal.pose
+    publishPath(thisPath)
 
 
 
@@ -65,8 +66,8 @@ def readStart(startPos):
     global startPosY
     global startPosNode
 
-    startPosX = startPos.pose.pose.position.x / resolution
-    startPosY = startPos.pose.pose.position.y / resolution
+    startPosX = int(startPos.pose.pose.position.x / resolution)
+    startPosY = int(startPos.pose.pose.position.y / resolution)
     indexStart = int(math.floor(startPosX + (startPosY * width)))
     
     #Cconvert start node to a Node Object. 
@@ -82,8 +83,14 @@ def publishPath(path):
     cells.cell_height = resolution
 
     for node in path:
-        xpos = node.x
-        ypos = node.y
+        point = Point()
+        point.x = (node.x * resolution) + (2.25 * resolution)#offsetX + (1.5 * resolution)
+        point.y=(node.y * resolution) + (.5 * resolution) #offsetY - (.5 * resolution)
+        point.z = 0
+        cells.cells.append(point)
+
+    pubpath.publish(cells)
+
 
 #publishes map to rviz using gridcells type
 
@@ -110,23 +117,12 @@ def publishCells(grid):
                 point.z=0
                 cells.cells.append(point)
     pub.publish(cells)
-
-def publishPath(path):
-    global pubpath
-
-    cells = GridCells()
-    cells.header.frame_id = 'map'
-    cells.cell_width = resolution
-    cells.cell_height = resolution
-
-    for node in path:
-        xpos = node.x
-        ypos = node.y
                    
 
 #Main handler of the project
 def run():
     global pub
+    global pubpath
     rospy.init_node('lab3')
     sub = rospy.Subscriber("/map", OccupancyGrid, mapCallBack)
     pub = rospy.Publisher("/map_check", GridCells, queue_size=1)  
