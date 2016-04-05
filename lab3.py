@@ -11,6 +11,7 @@ import tf
 import numpy
 import math 
 import rospy, tf, numpy, math
+import AStar
 
 
 # reads in global map
@@ -49,10 +50,8 @@ def readGoal(goal):
     goalX= goal.pose.position.x
     goalY= goal.pose.position.y
 
-
-
-    indexGoal = math.floor(goalX + (goalY*width))
-    print "goalX: %d , goalY: %d, indexGoal: %f, mapData[]: %f, width: %f" % (goalX, goalY, indexGoal, mapData[indexGoal] , width)
+    indexGoal = int(math.floor(goalX + (goalY*width)))
+    print "indexGoal: ", indexGoal
     #COnvert the goal to a Node object
     goalNode = Node(goalX, goalY, mapData[indexGoal], width)
     AStar(startPosNode, goalNode, nodeGrid)
