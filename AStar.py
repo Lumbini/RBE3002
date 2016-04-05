@@ -31,7 +31,27 @@ def constructPath(fromNode):
 	return final
 
 def getWaypoints(path):
-	pass
+	waypoints = []
+	for i in range(2, len(path)):
+		xVal1 = path[i-1].x - path[i-2].x
+		if xVal1 != 0:
+			#calculate the gradient
+			yVal1 = path[i-1].y - path[i-2].y
+			grad1 = yVal1/xVal1
+		else: 
+			grad1 = 1000
+
+		xVal2 = path[i-1].x - path[i].x
+		if xVal2 != 0:
+			#calculate the gradient
+			yVal2 = path[i-1].y - path[i].y
+			grad2 = yVal2/xVal2
+		else: 
+			grad2 = 1000
+
+		if(grad1 != grad2):
+			waypoints.append(path[i-1])
+	return waypoints
 	#return waypoints given the certain path
 
 ## A* algorithm
