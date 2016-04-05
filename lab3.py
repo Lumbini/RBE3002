@@ -55,10 +55,9 @@ def readGoal(goal):
     #COnvert the goal to a Node object
     goalNode = Node(goalX, goalY, mapData[indexGoal], width)
     thisPath = AStar.AStar(startPosNode, goalNode, nodeGrid)
-    print "path from: ", startPosNode, " to ", goalNode, ": ", thisPath
+    waypoints = AStar.AStar(thisPath)
     print "goal", goal.pose
-    publishPath(thisPath)
-
+    publishPath(thisPath, waypoints)
 
 
 def readStart(startPos):
@@ -74,13 +73,19 @@ def readStart(startPos):
     startPosNode = Node(startPosX, startPosY, mapData[indexStart], width)
     print "start ", startPos.pose.pose
 
-def publishPath(path):
+def publishPath(path, waypoints):
     global pubpath
+    global pubway
 
     cells = GridCells()
     cells.header.frame_id = 'map'
     cells.cell_width = resolution
     cells.cell_height = resolution
+
+    cells2 = GridCells()
+    cells2.header.frame_id = 'map'
+    cells2.cell_width = resolution
+    cells2.cell_height = resolution
 
     for node in path:
         point = Point()
@@ -89,7 +94,16 @@ def publishPath(path):
         point.z = 0
         cells.cells.append(point)
 
+    for node in path:
+        point = Point()
+        point.x = (node.x * resolution) + (2.25 * resolution)#offsetX + (1.5 * resolution)
+        point.y=(node.y * resolution) + (.5 * resolution) #offsetY - (.5 * resolution)
+        point.z = 0
+        cells2.cells.append(point)
+
     pubpath.publish(cells)
+    pubway.publish(cells2)
+
 
 
 #publishes map to rviz using gridcells type
@@ -123,6 +137,7 @@ def publishCells(grid):
 def run():
     global pub
     global pubpath
+    global pubway
     rospy.init_node('lab3')
     sub = rospy.Subscriber("/map", OccupancyGrid, mapCallBack)
     pub = rospy.Publisher("/map_check", GridCells, queue_size=1)  

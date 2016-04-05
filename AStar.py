@@ -30,6 +30,10 @@ def constructPath(fromNode):
 	print "final path is ", final
 	return final
 
+def getWaypoints(path):
+	pass
+	#return waypoints given the certain path
+
 ## A* algorithm
 def AStar(start, goal, grid):
 
