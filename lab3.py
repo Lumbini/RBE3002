@@ -45,16 +45,16 @@ def mapCallBack(data):
 def readGoal(goal):
     global goalX
     global goalY
-
-    ##NEED A BETTER WAY TO FIX THIS 
+ 
     goalX= goal.pose.position.x
     goalY= goal.pose.position.y
 
     indexGoal = int(math.floor(goalX + (goalY*width)))
-    print "indexGoal: ", indexGoal
+
     #COnvert the goal to a Node object
     goalNode = Node(goalX, goalY, mapData[indexGoal], width)
-    AStar(startPosNode, goalNode, nodeGrid)
+    thisPath = AStar.AStar(startPosNode, goalNode, nodeGrid)
+    print "path from: ", startPosNode, " to ", goalNode, ": ", thisPath
     print goal.pose
 
 
@@ -64,12 +64,12 @@ def readStart(startPos):
     global startPosY
     global startPosNode
 
-    indexStart = startPosX + (startPosY * width)
     startPosX = startPos.pose.pose.position.x
     startPosY = startPos.pose.pose.position.y
+    indexStart = int(math.floor(startPosX + (startPosY * width)))
     
     #Cconvert start node to a Node Object. 
-    startPosNode = Node(startPosX, StartPosY, mapData[indexStart], width)
+    startPosNode = Node(startPosX, startPosY, mapData[indexStart], width)
     print startPos.pose.pose
 
 def publishPath(path):

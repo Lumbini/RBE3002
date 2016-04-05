@@ -20,8 +20,8 @@ class Node:
         neighbors = []
 
         ## for each x and y in the grid
-        for x in range(self.x - 1, self.x + 2):
-            for y in range(self.y - 1, self.y + 2):
+        for x in range(int(self.x - 1), int(self.x + 2)):
+            for y in range(int(self.y - 1), int(self.y + 2)):
                 ## if that coordinate is within the grid and is not self
                 if (x >= 0 and x <= self.width) and (y >= 0 and y <= (len(grid) / self.width) - 1) and (x != self.x or y != self.y):
                     ## get that node
