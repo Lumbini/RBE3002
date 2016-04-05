@@ -7,6 +7,7 @@ from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, PoseWithCovarianc
 from nav_msgs.msg import Odometry, OccupancyGrid
 from kobuki_msgs.msg import BumperEvent
 from Node import Node
+import Driving
 import tf
 import numpy
 import math 
@@ -56,9 +57,16 @@ def readGoal(goal):
     goalNode = Node(goalX, goalY, mapData[indexGoal], width)
     thisPath = AStar.AStar(startPosNode, goalNode, nodeGrid)
     waypoints = AStar.getWaypoints(thisPath)
+
     print "goal", goal.pose
     publishPath(thisPath, waypoints)
-
+    for i in waypoints:
+        newPoseX = waypoints[i].x * resolution
+        newPoseY = waypoints[i].x * resolution
+        newPose = Pose()
+        newPose.pose.position.x = newPoseX
+        newPose.pose.position.y = newPoseY
+        Driving.navToPose(newPose)
 
 def readStart(startPos):
     global startPosX
