@@ -70,15 +70,17 @@ def readGoal(goal):
     goalNode = Node(goalX, goalY, mapData[indexGoal], width)
     thisPath = AStar.AStar(startPosNode, goalNode, nodeGridCopy)
     waypoints = AStar.getWaypoints(thisPath)
+    waypoints.append(goalNode)
+    waypoints.append(startPosNode)
 
     print "goal", goal.pose
     publishPath(thisPath, waypoints)
-    for i in waypoints:
+    for i in range(0, len(waypoints)):
         newPoseX = waypoints[i].x * resolution
-        newPoseY = waypoints[i].x * resolution
+        newPoseY = waypoints[i].y * resolution
         newPose = Pose()
-        newPose.pose.position.x = newPoseX
-        newPose.pose.position.y = newPoseY
+        newPose.position.x = newPoseX
+        newPose.position.y = newPoseY
         Driving.navToPose(newPose)
 
 def readStart(startPos):
@@ -110,14 +112,14 @@ def publishPath(path, waypoints):
 
     for node in path:
         point = Point()
-        point.x = (node.x * resolution) + (2.25 * resolution)#offsetX + (1.5 * resolution)
+        point.x = (node.x * resolution) + (0.5 * resolution)#offsetX + (1.5 * resolution)
         point.y=(node.y * resolution) + (.5 * resolution) #offsetY - (.5 * resolution)
         point.z = 0
         cells.cells.append(point)
 
     for node in waypoints:
         point = Point()
-        point.x = (node.x * resolution) + (2.25 * resolution)#offsetX + (1.5 * resolution)
+        point.x = (node.x * resolution) + (0.5 * resolution)#offsetX + (1.5 * resolution)
         point.y=(node.y * resolution) + (.5 * resolution) #offsetY - (.5 * resolution)
         point.z = 0
         cells2.cells.append(point)
@@ -156,14 +158,13 @@ def publishCells(grid, nodes):
                 point.y=(i*resolution)+offsetY - (.5 * resolution) # added secondary offset ... Magic ?
                 point.z=0
                 cells.cells.append(point)
-            else:
-                thisNode = nodes[j + (i * width)]
-                if(thisNode.data == 100):
-                    point=Point()
-                    point.x=(j*resolution)+offsetX + (.5 * resolution) # added secondary offset 
-                    point.y=(i*resolution)+offsetY - (-0.5 * resolution) # added secondary offset ... Magic ?
-                    point.z=0
-                    cells2.cells.append(point)
+            thisNode = nodes[j + (i * width)]
+            if(thisNode.data == 100):
+                point=Point()
+                point.x=(j*resolution)+offsetX + (.5 * resolution) # added secondary offset 
+                point.y=(i*resolution)+offsetY - (-0.5 * resolution) # added secondary offset ... Magic ?
+                point.z=0
+                cells2.cells.append(point)
 
     pub.publish(cells)
     expand_pub.publish(cells2)

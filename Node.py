@@ -1,3 +1,4 @@
+import math
 
 class Node:
 
@@ -23,10 +24,8 @@ class Node:
         for x in range(int(self.x - 1), int(self.x + 2)):
             for y in range(int(self.y - 1), int(self.y + 2)):
                 ## if that coordinate is within the grid and is not self
-                ## TODO check and make sure the <s are right
                 if (x >= 0 and x < self.width) and (y >= 0 and y < (len(grid) / self.width)) and (x != self.x or y != self.y):
                     ## get that node
-                    print "node in grid ", x, y
                     tempNode = self.getNode(x, y, grid)
                     #print "node in grid ", x, y, tempNode.data
                     ## if the node is not null, is not a wall, and is not unknown
