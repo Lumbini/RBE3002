@@ -18,19 +18,20 @@ class Node:
     def getNeighbors(self, grid):
 
         neighbors = []
-        print "in neighbors"
+        #print "in neighbors"
         ## for each x and y in the grid
         for x in range(int(self.x - 1), int(self.x + 2)):
             for y in range(int(self.y - 1), int(self.y + 2)):
                 ## if that coordinate is within the grid and is not self
-                if (x >= 0 and x <= self.width) and (y >= 0 and y <= (len(grid) / self.width) - 1) and (x != self.x or y != self.y):
+                ## TODO check and make sure the <s are right
+                if (x >= 0 and x < self.width) and (y >= 0 and y < (len(grid) / self.width)) and (x != self.x or y != self.y):
                     ## get that node
                     tempNode = self.getNode(x, y, grid)
-                    print "node in grid ", x, y, tempNode.data
+                    #print "node in grid ", x, y, tempNode.data
                     ## if the node is not null, is not a wall, and is not unknown
                     if tempNode != None and tempNode.data != 100 and tempNode.data != -1:
                         ## append this node to our neighbors list
-                        print "node is neighbor"
+                        #print "node is neighbor"
                         neighbors.append(tempNode)
 
         ## return the neighbors list

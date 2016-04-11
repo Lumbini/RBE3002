@@ -13,6 +13,7 @@ import numpy
 import math 
 import rospy, tf, numpy, math
 import AStar
+import copy
 
 
 # reads in global map
@@ -24,6 +25,7 @@ def mapCallBack(data):
     global resolution
     global offsetX
     global offsetY
+    global nodeGridCopy
     global nodeGrid
     mapgrid = data
     resolution = data.info.resolution
@@ -41,6 +43,17 @@ def mapCallBack(data):
         node = Node(xpos, ypos, prob, width)
         nodeGrid.append(node)
 
+    nodeGridCopy = copy.deepcopy(nodeGrid)
+
+    for i in range(0, len(nodeGrid)):
+        y = math.floor(i / width)
+        x = i - (y * width)
+        node = nodeGrid[int(x + (y * width))]
+        if(node.data == 100):
+            for neighbor in node.getNeighbors(nodeGrid):
+                index = int(neighbor.x + neighbor.y * width)
+                nodeGridCopy[index].data = 100
+
     print data.info
 
 def readGoal(goal):
@@ -55,7 +68,7 @@ def readGoal(goal):
 
     #COnvert the goal to a Node object
     goalNode = Node(goalX, goalY, mapData[indexGoal], width)
-    thisPath = AStar.AStar(startPosNode, goalNode, nodeGrid)
+    thisPath = AStar.AStar(startPosNode, goalNode, nodeGridCopy)
     waypoints = AStar.getWaypoints(thisPath)
 
     print "goal", goal.pose
@@ -116,7 +129,7 @@ def publishPath(path, waypoints):
 
 #publishes map to rviz using gridcells type
 
-def publishCells(grid):
+def publishCells(grid, nodes):
     global pub
     print "publishing"
 
@@ -126,6 +139,11 @@ def publishCells(grid):
     cells.header.frame_id = 'map'
     cells.cell_width = resolution 
     cells.cell_height = resolution
+
+    cells2 = GridCells()
+    cells2.header.frame_id = 'map'
+    cells2.cell_width = resolution 
+    cells2.cell_height = resolution
 
     for i in range(1,height): #height should be set to hieght of grid
         k=k+1
@@ -138,7 +156,18 @@ def publishCells(grid):
                 point.y=(i*resolution)+offsetY - (.5 * resolution) # added secondary offset ... Magic ?
                 point.z=0
                 cells.cells.append(point)
+            else:
+                thisNode = nodes[j + (i * width)]
+                if(thisNode.data == 100):
+                    point=Point()
+                    point.x=(j*resolution)+offsetX + (1.5 * resolution) # added secondary offset 
+                    point.y=(i*resolution)+offsetY - (.5 * resolution) # added secondary offset ... Magic ?
+                    point.z=0
+                    cells2.cells.append(point)
+
     pub.publish(cells)
+    expand_pub.publish(cells2)
+
                    
 
 #Main handler of the project
@@ -146,6 +175,7 @@ def run():
     global pub
     global pubpath
     global pubway
+    global expand_pub
     rospy.init_node('lab3')
     sub = rospy.Subscriber("/map", OccupancyGrid, mapCallBack)
     pub = rospy.Publisher("/map_check", GridCells, queue_size=1)  
@@ -153,12 +183,13 @@ def run():
     pubway = rospy.Publisher("/waypoints", GridCells, queue_size=1)
     goal_sub = rospy.Subscriber('goal_lab3', PoseStamped, readGoal, queue_size=1) #change topic for best results
     start_sub = rospy.Subscriber('initpose', PoseWithCovarianceStamped, readStart, queue_size=1) #change topic for best results
+    expand_pub = rospy.Publisher('/expand', GridCells, queue_size=1)
 
     # wait a second for publisher, subscribers, and TF
     rospy.sleep(1)
 
     while (1 and not rospy.is_shutdown()):
-        publishCells(mapData) #publishing map data every 2 seconds
+        publishCells(mapData, nodeGridCopy) #publishing map data every 2 seconds
         rospy.sleep(2)  
         print("Complete")
 
