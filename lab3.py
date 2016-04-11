@@ -51,7 +51,7 @@ def mapCallBack(data):
         node = nodeGrid[int(x + (y * width))]
         if(node.data == 100):
             for neighbor in node.getNeighbors(nodeGrid):
-                index = int(neighbor.x + neighbor.y * width)
+                index = int(math.floor(neighbor.x + neighbor.y * width))
                 nodeGridCopy[index].data = 100
 
     print data.info
@@ -160,8 +160,8 @@ def publishCells(grid, nodes):
                 thisNode = nodes[j + (i * width)]
                 if(thisNode.data == 100):
                     point=Point()
-                    point.x=(j*resolution)+offsetX + (1.5 * resolution) # added secondary offset 
-                    point.y=(i*resolution)+offsetY - (.5 * resolution) # added secondary offset ... Magic ?
+                    point.x=(j*resolution)+offsetX + (.5 * resolution) # added secondary offset 
+                    point.y=(i*resolution)+offsetY - (-0.5 * resolution) # added secondary offset ... Magic ?
                     point.z=0
                     cells2.cells.append(point)
 

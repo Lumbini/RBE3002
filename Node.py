@@ -26,6 +26,7 @@ class Node:
                 ## TODO check and make sure the <s are right
                 if (x >= 0 and x < self.width) and (y >= 0 and y < (len(grid) / self.width)) and (x != self.x or y != self.y):
                     ## get that node
+                    print "node in grid ", x, y
                     tempNode = self.getNode(x, y, grid)
                     #print "node in grid ", x, y, tempNode.data
                     ## if the node is not null, is not a wall, and is not unknown
