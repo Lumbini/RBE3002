@@ -1,8 +1,5 @@
 #!/usr/bin/env python
 
-#Author Joseph St. Germain 
-#Co-Authur Arthur lockmans drive smooth function
-
 
 import rospy, tf, numpy, math
 from kobuki_msgs.msg import BumperEvent
@@ -11,21 +8,24 @@ from geometry_msgs.msg import Twist, Pose
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 from tf.transformations import euler_from_quaternion
+from nav_msgs.msg import GridCells
+from nav_msgs.msg import Odometry, OccupancyGrid
 
 
 wheel_rad = 3.5 / 100.0 #cm
 wheel_base = 23.0 / 100.0 #cm
 
+
 def publishTwist(lin_Vel, ang_Vel):
     """Send a movement (twist) message."""
-    global pub
+    global pubDrive
     msg = Twist()
     msg.linear.x = lin_Vel
     msg.angular.z = ang_Vel
-    pub.publish(msg)
+    pubDrive.publish(msg)
 
 
-def navToPose(goal):
+def navToPose(nextPose):
     """Drive to a goal subscribed to from /move_base_simple/goal"""
     #compute angle required to make straight-line move to desired pose
     global xPosition
@@ -33,10 +33,10 @@ def navToPose(goal):
     global theta
     global pose
     #capture desired x and y positions
-    desiredY = goal.pose.position.y
-    desiredX = goal.pose.position.x
+    desiredY = nextPose.position.y
+    desiredX = nextPose.position.x
     #capture desired angle
-    quat = goal.pose.orientation
+    quat = nextPose.orientation
     q = [quat.x, quat.y, quat.z, quat.w]
     roll, pitch, yaw = euler_from_quaternion(q)
     desiredT = yaw * (180.0/math.pi)
@@ -46,17 +46,16 @@ def navToPose(goal):
     differenceY = pose.position.y - desiredY
     distance = math.sqrt(math.pow(differenceX, 2) + math.pow(differenceY, 2))
 
-    print goal.pose.position.x, goal.pose.position.y
-    print xPosition, yPosition
+    print nextPose.position.x, nextPose.position.y
 
     #compute initial turn amount
     initialTurn = math.degrees(math.atan(differenceY/differenceX))
     print "spin!" #turn to calculated angle
-    rotate(initialTurn)
+    rotateJake(initialTurn)
     print "move!" #move in straight line specified distance to new pose
-    driveStraight(0.25, distance)
+    driveSmooth(0.2, distance)
     print "spin!" #spin to final angle 
-    rotate(desiredT)
+    rotateJake(desiredT)
     print "done"
 
 
@@ -85,13 +84,12 @@ def spinWheels(u1, u2, time):
     stop_msg.angular.z = 0
     #publish move message for desired time
     while(rospy.Time().now().secs - start < time and not rospy.is_shutdown()): # waits for said time and checks for ctrl C
-        pub.publish(move_msg) #publishes the move_msg
-    pub.publish(stop_msg)
+        pubDrive.publish(move_msg) #publishes the move_msg
+    pubDrive.publish(stop_msg)
 
 #This function accepts a speed and a distance for the robot to move in a straight line
 def driveStraight(speed, distance):
     """This function accepts a speed and a distance for the robot to move in a straight line"""
-    global pose
 
     initialX = pose.position.x
     initialY = pose.position.y
@@ -124,32 +122,58 @@ def driveSmooth(speed, distance):
         currentX = pose.position.x
         currentY = pose.position.y
         dist = math.sqrt(math.pow((currentX - initX), 2) + math.pow((currentY - initY), 2))
-	if (rampVel < 0):
-	    rampVel = 0
-	    publishTwist(rampVel, 0)
-	    print "Pub1: "+ str(rampVel)
+        if (rampVel < 0):
+            rampVel = 0
+            publishTwist(rampVel, 0)
+            print "Pub1: "+ str(rampVel)
         if (dist >= distance):
             publishTwist(0, 0)
-	    print "Pub2: "+ str(rampVel)
+            print "Pub2: "+ str(rampVel)
             atDest = 1
         else:
             if((distance - dist) <= distance * percent and rampVel >= 0):
                 rampVel -= increment
                 publishTwist(rampVel, 0)
-		print "Pub3: "+ str(rampVel)
+                print "Pub3: "+ str(rampVel)
             elif((distance - dist) >= distance * (1.0 - percent) and rampVel <= speed):
-		rampVel += increment
-		publishTwist(rampVel, 0)
-		print "Pub4: " + str(rampVel)
-	    else:
-		publishTwist(speed, 0)
-		print "Pub5: " + str(rampVel)
+                rampVel += increment
+                publishTwist(rampVel, 0)
+                print "Pub4: " + str(rampVel)
+            else:
+                publishTwist(speed, 0)
+                print "Pub5: " + str(rampVel)
 	rospy.sleep(0.03)
+
+def rotateJake(angle):
+    global odom_list
+    global pose
+    if (angle > 180 or angle<-180):
+        print "angle is too large or small"
+    vel = Twist();   
+    done = True
+
+    # set rotation direction
+    error = angle-math.degrees(pose.orientation.z)
+
+    if error >= 0:
+        turn = "left"
+    else:
+        turn = "right"
+
+    while ((abs(error) >= 6) and not rospy.is_shutdown()):    
+        #print "theta: %d" % math.degrees(pose.orientation.z) ## prints for debugging
+        if turn == "right":
+            spinWheels(-.02, .02, .1) 
+        else:
+            spinWheels(.02, -.02, .1) 
+        currentAngle = math.degrees(pose.orientation.z)
+        error = angle - currentAngle
+    vel.angular.z = 0.0
+    pubDrive.publish(vel)
 
 def rotate(angle):
     global odom_list
     global pose
-
     if (angle >= 180 or angle<=-180):
         print "angle is to large or small"
     vel = Twist();   
@@ -171,10 +195,10 @@ def rotate(angle):
         print "Error: %d" % error
         print "Rotate Pose %d" % math.degrees(pose.orientation.z)
         vel.angular.z = 0.5*turn
-        pub.publish(vel)
+        pubDrive.publish(vel)
         error = angle - (math.degrees(pose.orientation.z))
     vel.angular.z = 0.0
-    pub.publish(vel)
+    pubDrive.publish(vel)
 
 def executeTrajectory():
     """This function sequentially calls methods to perform a trajectory."""
@@ -206,10 +230,36 @@ def readBumper(msg):
         print "Bumper pressed!"
         executeTrajectory()
 
+def waypointsCallback(gridCells):
+    global pose     #Provides acess to the current pose
+    global finalGoal
+    wayPoses = []   #List to which the gridcells is parsed as poses
+
+    # Iterates through the cells in gridcells and appends to wayposes
+    # to be passed into navToPose
+    for index in range(0, len(gridCells.cells)):
+        nextPose = Pose()
+        nextPose.position.x = gridCells.cells[index].x
+        nextPose.position.y = gridCells.cells[index].y
+        nextPose.orientation.z = pose.orientation.z
+
+        wayPoses.append(nextPose)
+        navToPose(nextPose)
+
+def findGoal(goal):
+    global pose     #Provides access to the current Pose
+    global finalGoal    # Global Final Goal
+
+    # Converting the Poststamped to a pose.
+    finalGoal = Pose()
+    finalGoal = goal.pose.position.x
+    finalGoal = goal.pose.position.y
+    finalGoal = goal.pose.orientation.z
+
 
 #keeps track of current location and orientation
 def tCallback(event):
-	
+    
     global pose
     global xPosition
     global yPosition
@@ -232,41 +282,61 @@ def tCallback(event):
     pose.orientation.z = yaw
     theta = math.degrees(yaw)
 
-
-
-# This is the program's main function
 if __name__ == '__main__':
-    rospy.init_node('lparnas_Lab2')
-    global pub
-    global pose
+    global pubDrive
     global odom_list
     global odom_tf
-    
-    pose = Pose()
-    pub = rospy.Publisher('cmd_vel_mux/input/teleop', Twist, None, queue_size=10) # Publisher for commanding robot motion
-    bumper_sub = rospy.Subscriber('mobile_base/events/bumper', BumperEvent, readBumper, queue_size=1) # Callback function to handle bumper events
-    goal_sub = rospy.Subscriber('move_base_simple/mygoal', PoseStamped, navToPose, queue_size=1)
+    global pose
 
+    pose = Pose()
+    #Open a new node for driving
+    rospy.init_node('Driving_AStar')
+
+    #Driving publisher
+    pubDrive = rospy.Publisher('cmd_vel_mux/input/teleop', Twist, None, queue_size=10) # Publisher for commanding robot motion
+    goal_sub_Drive = rospy.Subscriber('/goal_lab3', PoseStamped, findGoal, queue_size=1) #Subscribe to the set goal
+    waypoints_sub = rospy.Subscriber('/waypoints', GridCells, waypointsCallback, queue_size=1) #Subscribe to the set waypoints
     rospy.Timer(rospy.Duration(.01), tCallback) # timer callback for robot location
-    
     odom_list = tf.TransformListener() #listner for robot location
 
     rospy.sleep(2)
 
-    #print "Starting Lab 2"
-    #print "Spinning"
-    #spinWheels(0.20, -0.20, 3)
-    #print "Driving Forward"
-    #driveStraight(0.2, 0.5)
-    #print "Rotating x degrees"
-    #rotate(90)
-    #print "Executing Trajectory"
-    #executeTrajectory()
-    print "Driving Smoothly"
-    driveSmooth(0.5, 1)
-
-
     while not rospy.is_shutdown():
         rospy.spin()
+
+# # This is the program's main function
+# if __name__ == '__main__':
+#     rospy.init_node('lparnas_Lab2')
+#     global pub
+#     global pose
+#     global odom_list
+#     global odom_tf
     
-    print "Lab 2 complete!"
+#     pose = Pose()
+#     pub = rospy.Publisher('cmd_vel_mux/input/teleop', Twist, None, queue_size=10) # Publisher for commanding robot motion
+#     bumper_sub = rospy.Subscriber('mobile_base/events/bumper', BumperEvent, readBumper, queue_size=1) # Callback function to handle bumper events
+#     goal_sub = rospy.Subscriber('move_base_simple/mygoal', PoseStamped, navToPose, queue_size=1)
+
+#     rospy.Timer(rospy.Duration(.01), tCallback) # timer callback for robot location
+    
+#     odom_list = tf.TransformListener() #listner for robot location
+
+#     rospy.sleep(2)
+
+#     #print "Starting Lab 2"
+#     #print "Spinning"
+#     #spinWheels(0.20, -0.20, 3)
+#     #print "Driving Forward"
+#     #driveStraight(0.2, 0.5)
+#     #print "Rotating x degrees"
+#     #rotate(90)
+#     #print "Executing Trajectory"
+#     #executeTrajectory()
+#     print "Driving Smoothly"
+#     driveSmooth(0.5, 1)
+
+
+#     while not rospy.is_shutdown():
+#         rospy.spin()
+    
+#     print "Lab 2 complete!"

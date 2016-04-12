@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import rospy
 from nav_msgs.msg import GridCells
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, PoseWithCovarianceStamped
@@ -8,9 +7,6 @@ from nav_msgs.msg import Odometry, OccupancyGrid
 from kobuki_msgs.msg import BumperEvent
 from Node import Node
 import Driving
-import tf
-import numpy
-import math 
 import rospy, tf, numpy, math
 import AStar
 import copy
@@ -59,6 +55,7 @@ def mapCallBack(data):
 def readGoal(goal):
     global goalX
     global goalY
+    global pose
     print 'hi'
  
     goalX = int(goal.pose.position.x / resolution)
@@ -69,9 +66,10 @@ def readGoal(goal):
     #COnvert the goal to a Node object
     goalNode = Node(goalX, goalY, mapData[indexGoal], width)
     thisPath = AStar.AStar(startPosNode, goalNode, nodeGridCopy)
-    waypoints = AStar.getWaypoints(thisPath)
-    waypoints.append(goalNode)
+    waypoints = []
     waypoints.append(startPosNode)
+    waypoints.extend(AStar.getWaypoints(thisPath))
+    waypoints.append(goalNode)
 
     print "goal", goal.pose
     publishPath(thisPath, waypoints)
@@ -81,7 +79,6 @@ def readGoal(goal):
         newPose = Pose()
         newPose.position.x = newPoseX
         newPose.position.y = newPoseY
-        Driving.navToPose(newPose)
 
 def readStart(startPos):
     global startPosX
@@ -94,7 +91,6 @@ def readStart(startPos):
     
     #Cconvert start node to a Node Object. 
     startPosNode = Node(startPosX, startPosY, mapData[indexStart], width)
-    print "start ", startPos.pose.pose
 
 def publishPath(path, waypoints):
     global pubpath
@@ -169,7 +165,7 @@ def publishCells(grid, nodes):
     pub.publish(cells)
     expand_pub.publish(cells2)
 
-                   
+
 
 #Main handler of the project
 def run():
@@ -177,20 +173,25 @@ def run():
     global pubpath
     global pubway
     global expand_pub
+    global nodeGridCopy
+
+
     rospy.init_node('lab3')
     sub = rospy.Subscriber("/map", OccupancyGrid, mapCallBack)
     pub = rospy.Publisher("/map_check", GridCells, queue_size=1)  
     pubpath = rospy.Publisher("/path", GridCells, queue_size=1) # you can use other types if desired
     pubway = rospy.Publisher("/waypoints", GridCells, queue_size=1)
-    goal_sub = rospy.Subscriber('goal_lab3', PoseStamped, readGoal, queue_size=1) #change topic for best results
-    start_sub = rospy.Subscriber('initpose', PoseWithCovarianceStamped, readStart, queue_size=1) #change topic for best results
+    goal_sub = rospy.Subscriber('/goal_lab3', PoseStamped, readGoal, queue_size=1) #change topic for best results
+    start_sub = rospy.Subscriber('/initpose', PoseWithCovarianceStamped, readStart, queue_size=1) #change topic for best results
     expand_pub = rospy.Publisher('/expand', GridCells, queue_size=1)
-
+    
+    
     # wait a second for publisher, subscribers, and TF
-    rospy.sleep(1)
+    rospy.sleep(3)
 
     while (1 and not rospy.is_shutdown()):
         publishCells(mapData, nodeGridCopy) #publishing map data every 2 seconds
+        rospy.spin()
         rospy.sleep(2)  
         print("Complete")
 
