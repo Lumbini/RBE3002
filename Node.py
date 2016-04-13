@@ -37,6 +37,28 @@ class Node:
         ## return the neighbors list
         return neighbors
 
+    def getAllNeighbors(self, grid):
+
+        neighbors = []
+        #print "in neighbors"
+        ## for each x and y in the grid
+        for x in range(int(self.x - 1), int(self.x + 2)):
+            for y in range(int(self.y - 1), int(self.y + 2)):
+                ## if that coordinate is within the grid and is not self
+                if (x >= 0 and x < self.width) and (y >= 0 and y < (len(grid) / self.width)) and (x != self.x or y != self.y):
+                    ## get that node
+                    tempNode = self.getNode(x, y, grid)
+                    #print "node in grid ", x, y, tempNode.data
+                    ## if the node is not null, is not a wall, and is not unknown
+                    if tempNode != None and tempNode.data != -1:
+
+                        ## append this node to our neighbors list
+                        #print "node is neighbor"
+                        neighbors.append(tempNode)
+
+        ## return the neighbors list
+        return neighbors
+
     ## the equal function to check if two Nodes are equal
     ## basically need to check if class is the same and the coords are the same
     def __eq__(self, other):
@@ -50,11 +72,11 @@ class Node:
 
     ## the str function to informally print the node regularly
     def __str__(self):
-        return "Node %d %d" % (self.x, self.y)
+        return "Node %d %d %d" % (self.x, self.y, self.data)
 
     ## the repr function to formally print the node regularly
     def __repr__(self):
-        return "Node %d %d" % (self.x, self.y)
+        return "Node %d %d %d" % (self.x, self.y, self.data)
 
 ## main for testing purposes
 if __name__ == "__main__":

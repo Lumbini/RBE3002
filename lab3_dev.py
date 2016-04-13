@@ -40,40 +40,53 @@ def mapCallBack(data):
     offsetY = data.info.origin.position.y
     nodeGrid = []
 
-    smallerWidth = int(math.floor(width/3))
-
     for i in range(0, len(mapData)):
         prob = mapData[i]
         ypos = math.floor(i / width)
         xpos = i - (ypos * width)
         node = Node(xpos, ypos, prob, width)
         nodeGrid.append(node)
+        # print node
+
+    smallerWidth = int(math.floor(width/3))
 
     smallerNodeGrid = []
     for i in range(0, int(math.floor(len(mapData)/3))):
-	xpos = math.floor(node.x/3)
-	ypos - math.floor(node.y/3)
-	value = 0
-        node = Node(xpos, ypos, value, smallerWidth)
+        y = int(math.floor(i / smallerWidth))
+        x = int(i - ((math.floor(i/smallerWidth) * smallerWidth)))
+        value = 0
+        node = Node(x, y, value, smallerWidth)
         smallerNodeGrid.append(node)
 
-    for i in range(0, len(nodeGrid)):
-	node = nodeGrid[i]
-	neighbors = node.getNeighbors(nodeGrid)
-	for neighbor in neighbors:
-		if(neighbor.data == 100):
-			smallerNodeGrid[int(math.floor(i/3))].data = 100	
+    #print len(smallerNodeGrid)
+    for i in range(0, len(nodeGrid) - 1):
+        node = nodeGrid[i]
+        #print (node.data == 100)
+        neighbors = node.getAllNeighbors(nodeGrid)
+        # print neighbors
+        for neighbor in neighbors:
+            # print neighbor
+            if(neighbor.data == 100):
+                #print int(math.floor(i/3))
+                lowResNode = smallerNodeGrid[int(math.floor(i/3))]	
+                lowResNode.data = 100
+        #print "data: %d" %(smallerNodeGrid[int(math.floor(i/3))].data)
 
     nodeGridCopy = copy.deepcopy(smallerNodeGrid)
 
-    for i in range(0, len(nodeGrid)):
-        y = math.floor(i / smallerWidth)
-        x = i - (y * smallerWidth)
-        node = nodeGrid[int(x + (y * smallerWidth))]
+
+    for i in range(0, len(nodeGridCopy)):
+        #y = math.floor(i / smallerWidth)
+        #x = i - (y * smallerWidth)
+        node = nodeGridCopy[i]
         if(node.data == 100):
             for neighbor in node.getNeighbors(smallerNodeGrid):
                 index = int(math.floor(neighbor.x + neighbor.y * smallerWidth))
-                nodeGridCopy[index].data = 100
+                neighborNode = nodeGridCopy[index]
+                neighborNode.data = 100
+
+
+    #print nodeGridCopy
     print data.info
 
 def readGoal(goal):
@@ -86,7 +99,7 @@ def readGoal(goal):
 
     indexGoal = int(math.floor(goalX + (goalY*width)))
 
-    #COnvert the goal to a Node object
+    #Convert the goal to a Node object
     goalNode = Node(goalX, goalY, mapData[indexGoal], width)
     thisPath = AStar.AStar(startPosNode, goalNode, nodeGridCopy)
     waypoints = AStar.getWaypoints(thisPath)
@@ -153,6 +166,10 @@ def publishPath(path, waypoints):
 
 def publishCells(grid, nodes):
     global pub
+    global smallerNodeGrid
+    global offsetY
+    global offsetX
+
     print "publishing"
 
     # resolution and offset of the map
@@ -167,24 +184,28 @@ def publishCells(grid, nodes):
     cells2.cell_width = resolution*3
     cells2.cell_height = resolution*3
 
-    for i in range(1,len(grid)): #height should be set to height of grid
+    print len(grid)
+    for i in range(0,len(grid)): #height should be set to height of grid
         #print k # used for debugging
-        thisNode = nodes[i]
-        x = i - int(math.floor(i/smallerWidth))*smallerWidth
-        y = int(math.floor(i/smallerWidth))
+        thisNode = grid[i]
+        thatNode = nodes[i]
+        #print "data %d" % thisNode.data
+        #print "x: %d y: %d" %(thisNode.x,thisNode.y)
+        x = i - int(math.floor(i/width))*width
+        y = int(math.floor(i/width))
         if (thisNode.data == 100):
             point=Point()
             point.x=(x*resolution*3)+offsetX + (.5 * resolution*3) # added secondary offset 
-            point.y=(y*resolution*3)+offsetY - (-0.5 * resolution*3) # added secondary offset ... Magic ?
+            point.y=(y*resolution*3)+offsetY - (-0.0 * resolution*3) # added secondary offset ... Magic ?
             point.z=0
             cells.cells.append(point)
-        if(thisNode.data == 100):
+        if(thatNode.data == 100):
             point=Point()
             point.x=(x*resolution*3)+offsetX + (.5 * resolution*3) # added secondary offset 
             point.y=(y*resolution*3)+offsetY - (-0.5 * resolution*3) # added secondary offset ... Magic ?
             point.z=0
             cells2.cells.append(point)
-    
+    #print cells.cells
     pub.publish(cells)
     expand_pub.publish(cells2)
 
@@ -207,7 +228,7 @@ def run():
     expand_pub = rospy.Publisher('/expand', GridCells, queue_size=1)
 
     # wait a second for publisher, subscribers, and TF
-    rospy.sleep(4)
+    rospy.sleep(10)
 
     while (1 and not rospy.is_shutdown()):
         publishCells(smallerNodeGrid, nodeGridCopy) #publishing map data every 4 seconds
