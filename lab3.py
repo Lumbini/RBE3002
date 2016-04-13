@@ -67,7 +67,7 @@ def readGoal(goal):
     goalNode = Node(goalX, goalY, mapData[indexGoal], width)
     thisPath = AStar.AStar(startPosNode, goalNode, nodeGridCopy)
     waypoints = []
-    waypoints.append(startPosNode)
+    #waypoints.append(startPosNode)
     waypoints.extend(AStar.getWaypoints(thisPath))
     waypoints.append(goalNode)
 
@@ -116,7 +116,7 @@ def publishPath(path, waypoints):
     for node in waypoints:
         point = Point()
         point.x = (node.x * resolution) + (0.5 * resolution)#offsetX + (1.5 * resolution)
-        point.y=(node.y * resolution) + (.5 * resolution) #offsetY - (.5 * resolution)
+        point.y = (node.y * resolution) + (0.5 * resolution) #offsetY - (.5 * resolution)
         point.z = 0
         cells2.cells.append(point)
 

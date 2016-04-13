@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-
 import rospy, tf, numpy, math
 from kobuki_msgs.msg import BumperEvent
 from std_msgs.msg import String
@@ -9,7 +8,7 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 from tf.transformations import euler_from_quaternion
 from nav_msgs.msg import GridCells
-from nav_msgs.msg import Odometry, OccupancyGrid
+from nav_msgs.msg import OccupancyGrid
 
 
 wheel_rad = 3.5 / 100.0 #cm
@@ -32,6 +31,7 @@ def navToPose(nextPose):
     global yPosition
     global theta
     global pose
+    print "Naving to Pose"
     #capture desired x and y positions
     desiredY = nextPose.position.y
     desiredX = nextPose.position.x
@@ -50,12 +50,22 @@ def navToPose(nextPose):
 
     #compute initial turn amount
     initialTurn = math.degrees(math.atan(differenceY/differenceX))
+
+    if(differenceY <0) and (differenceX>0):
+        initialTurn -= 180
+    elif (differenceY > 0) and (differenceX >0):
+        initialTurn -= 360
+
+
     print "spin!" #turn to calculated angle
-    rotateJake(initialTurn)
+    print "initialTurn: %d" % initialTurn
+
+    rotate(initialTurn)
     print "move!" #move in straight line specified distance to new pose
     driveSmooth(0.2, distance)
     print "spin!" #spin to final angle 
-    rotateJake(desiredT)
+    #rotate(desiredT)
+    print "finalTurn: %d" % desiredT
     print "done"
 
 
@@ -147,9 +157,13 @@ def driveSmooth(speed, distance):
 def rotateJake(angle):
     global odom_list
     global pose
-    if (angle > 180 or angle<-180):
+    if (angle > 180 or angle < -180):
         print "angle is too large or small"
-    vel = Twist();   
+        if(angle >= 180):
+            angle = angle -360
+        elif (angle <= -180):
+            angle = angle + 360
+    vel = Twist()   
     done = True
 
     # set rotation direction
@@ -160,8 +174,9 @@ def rotateJake(angle):
     else:
         turn = "right"
 
-    while ((abs(error) >= 6) and not rospy.is_shutdown()):    
-        #print "theta: %d" % math.degrees(pose.orientation.z) ## prints for debugging
+    while ((abs(error) >= 6) and not rospy.is_shutdown()):
+        print "To angle: %d" % angle    
+        print "theta: %d" % math.degrees(pose.orientation.z) ## prints for debugging
         if turn == "right":
             spinWheels(-.02, .02, .1) 
         else:
@@ -174,8 +189,13 @@ def rotateJake(angle):
 def rotate(angle):
     global odom_list
     global pose
-    if (angle >= 180 or angle<=-180):
+    if (angle > 180 or angle< -180):
         print "angle is to large or small"
+        if(angle > 180):
+            angle = angle -360
+        elif (angle < -180):
+            angle = angle + 360
+
     vel = Twist();   
     done = True
 
@@ -189,46 +209,16 @@ def rotate(angle):
         turn = -1
     
 
-    while ((abs(error) >= 5) and not rospy.is_shutdown()):
+    while ((abs(error) >= 6) and not rospy.is_shutdown()):
         #Use this while loop to start the robots motion and determine if you are at the right angle.    
         #print "theta: %d" % math.degrees(pose.orientation.z)
-        print "Error: %d" % error
-        print "Rotate Pose %d" % math.degrees(pose.orientation.z)
-        vel.angular.z = 0.5*turn
+        print "Error: %d, Rotate Pose %d, To angle: %d" % (error, math.degrees(pose.orientation.z), angle)
+       
+        vel.angular.z = 0.2*turn
         pubDrive.publish(vel)
         error = angle - (math.degrees(pose.orientation.z))
     vel.angular.z = 0.0
     pubDrive.publish(vel)
-
-def executeTrajectory():
-    """This function sequentially calls methods to perform a trajectory."""
-    global pose
-    driveStraight(0.5, 0.6)
-    #rotate(-100)
-    #driveStraight(0.25, .45)
-    #rotate(135)
-
-def driveArc(radius, speed, angle):
-    """This function works the same as rotate how ever it does not publish linear velocities."""
-    #assuming radius is turning radius, speed is drive speed, angle is desired final angle
-    #calculate wheel speeds and time to move from current pose to final pose
-    #spinWheels with time and speeds to move to correct pose
-    w = speed / radius
-    v1 = w * (radius + .5*.352)
-    v2 = w * (radius - .5*.352)
-
-    ############################# The rest of this function will be at least as long as rotate
-    pass  # Delete this 'pass' once implemented
-
-
-def readBumper(msg):
-    """Bumper event callback"""
-    if (msg.state == 1):
-        # What should happen when the bumper is pressed?
-        #Stop forward motion if bumper is pressed
-        publishTwist(0, 0)
-        print "Bumper pressed!"
-        executeTrajectory()
 
 def waypointsCallback(gridCells):
     global pose     #Provides acess to the current pose
@@ -303,40 +293,3 @@ if __name__ == '__main__':
 
     while not rospy.is_shutdown():
         rospy.spin()
-
-# # This is the program's main function
-# if __name__ == '__main__':
-#     rospy.init_node('lparnas_Lab2')
-#     global pub
-#     global pose
-#     global odom_list
-#     global odom_tf
-    
-#     pose = Pose()
-#     pub = rospy.Publisher('cmd_vel_mux/input/teleop', Twist, None, queue_size=10) # Publisher for commanding robot motion
-#     bumper_sub = rospy.Subscriber('mobile_base/events/bumper', BumperEvent, readBumper, queue_size=1) # Callback function to handle bumper events
-#     goal_sub = rospy.Subscriber('move_base_simple/mygoal', PoseStamped, navToPose, queue_size=1)
-
-#     rospy.Timer(rospy.Duration(.01), tCallback) # timer callback for robot location
-    
-#     odom_list = tf.TransformListener() #listner for robot location
-
-#     rospy.sleep(2)
-
-#     #print "Starting Lab 2"
-#     #print "Spinning"
-#     #spinWheels(0.20, -0.20, 3)
-#     #print "Driving Forward"
-#     #driveStraight(0.2, 0.5)
-#     #print "Rotating x degrees"
-#     #rotate(90)
-#     #print "Executing Trajectory"
-#     #executeTrajectory()
-#     print "Driving Smoothly"
-#     driveSmooth(0.5, 1)
-
-
-#     while not rospy.is_shutdown():
-#         rospy.spin()
-    
-#     print "Lab 2 complete!"
