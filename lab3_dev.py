@@ -18,6 +18,7 @@ import copy
 
 # reads in global map
 def mapCallBack(data):
+    print("map callback")
     global mapData
     global width
     global height
@@ -48,23 +49,22 @@ def mapCallBack(data):
         node = Node(xpos, ypos, prob, width)
         nodeGrid.append(node)
 
-	smallerNodeGrid = []
-   	for i in range(0, int(math.floor(len(mapData)/3))):
-   		xpos = math.floor(node.x/3)
-		ypos - math.floor(node.y/3)
-		value = 0
+    smallerNodeGrid = []
+    for i in range(0, int(math.floor(len(mapData)/3))):
+	xpos = math.floor(node.x/3)
+	ypos - math.floor(node.y/3)
+	value = 0
         node = Node(xpos, ypos, value, smallerWidth)
+        smallerNodeGrid.append(node)
 
-   	for i in range(0, len(nodeGrid)):
-		node = nodeGrid[i]
-		neighbors = node.getNeighbors(nodeGrid)
-		for neighbor in neighbors:
-	   		if(neighbor.data == 100):
-				smallerNodeGrid[int(math.floor(i/3))].data = 100	
+    for i in range(0, len(nodeGrid)):
+	node = nodeGrid[i]
+	neighbors = node.getNeighbors(nodeGrid)
+	for neighbor in neighbors:
+		if(neighbor.data == 100):
+			smallerNodeGrid[int(math.floor(i/3))].data = 100	
 
     nodeGridCopy = copy.deepcopy(smallerNodeGrid)
-
-	#print smallerWidth
 
     for i in range(0, len(nodeGrid)):
         y = math.floor(i / smallerWidth)
@@ -73,12 +73,11 @@ def mapCallBack(data):
         if(node.data == 100):
             for neighbor in node.getNeighbors(smallerNodeGrid):
                 index = int(math.floor(neighbor.x + neighbor.y * smallerWidth))
-                nodeGridCopy[i].data = 100
-
+                nodeGridCopy[index].data = 100
     print data.info
 
 def readGoal(goal):
-    global goalX
+    global goalX	
     global goalY
     print 'hi'
  
@@ -168,25 +167,24 @@ def publishCells(grid, nodes):
     cells2.cell_width = resolution*3
     cells2.cell_height = resolution*3
 
-    for i in range(1,math.floor(height/3)): #height should be set to height of grid
-        k=k+1
-        for j in range(1,smallerWidth): #width should be set to width of grid
-            k=k+1
-            #print k # used for debugging
- 	    thisNode = nodes[j + (i * smallerWidth)]
-            if (thisNode.data == 100):
-                point=Point()
-                point.x=(j*resolution*3)+offsetX + (.5 * resolution*3) # added secondary offset 
-                point.y=(i*resolution*3)+offsetY - (-0.5 * resolution*3) # added secondary offset ... Magic ?
-                point.z=0
-                cells.cells.append(point)
-            if(thisNode.data == 100):
-                point=Point()
-                point.x=(j*resolution*3)+offsetX + (.5 * resolution*3) # added secondary offset 
-                point.y=(i*resolution*3)+offsetY - (-0.5 * resolution*3) # added secondary offset ... Magic ?
-                point.z=0
-                cells2.cells.append(point)
-
+    for i in range(1,len(grid)): #height should be set to height of grid
+        #print k # used for debugging
+        thisNode = nodes[i]
+        x = i - int(math.floor(i/smallerWidth))*smallerWidth
+        y = int(math.floor(i/smallerWidth))
+        if (thisNode.data == 100):
+            point=Point()
+            point.x=(x*resolution*3)+offsetX + (.5 * resolution*3) # added secondary offset 
+            point.y=(y*resolution*3)+offsetY - (-0.5 * resolution*3) # added secondary offset ... Magic ?
+            point.z=0
+            cells.cells.append(point)
+        if(thisNode.data == 100):
+            point=Point()
+            point.x=(x*resolution*3)+offsetX + (.5 * resolution*3) # added secondary offset 
+            point.y=(y*resolution*3)+offsetY - (-0.5 * resolution*3) # added secondary offset ... Magic ?
+            point.z=0
+            cells2.cells.append(point)
+    
     pub.publish(cells)
     expand_pub.publish(cells2)
 
@@ -209,11 +207,11 @@ def run():
     expand_pub = rospy.Publisher('/expand', GridCells, queue_size=1)
 
     # wait a second for publisher, subscribers, and TF
-    rospy.sleep(5)
+    rospy.sleep(4)
 
     while (1 and not rospy.is_shutdown()):
-        publishCells(smallerNodeGrid, nodeGridCopy) #publishing map data every 2 seconds
-        rospy.sleep(4)  
+        publishCells(smallerNodeGrid, nodeGridCopy) #publishing map data every 4 seconds
+        rospy.sleep(4) 
         print("Complete")
 
 
