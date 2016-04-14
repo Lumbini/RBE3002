@@ -32,40 +32,60 @@ def navToPose(nextPose):
     global theta
     global pose
     print "Naving to Pose"
+    #initialTurn = 0;
     #capture desired x and y positions
     desiredY = nextPose.position.y
     desiredX = nextPose.position.x
     #capture desired angle
-    quat = nextPose.orientation
-    q = [quat.x, quat.y, quat.z, quat.w]
-    roll, pitch, yaw = euler_from_quaternion(q)
-    desiredT = yaw * (180.0/math.pi)
+    # quat = nextPose.orientation
+    # q = [quat.x, quat.y, quat.z, quat.w]
+
+    # roll, pitch, yaw = euler_from_quaternion(q)
+    # desiredT = yaw * (180.0/math.pi)
+
+    # print q, roll, pitch, yaw, desiredT
 
     #compute distance to target
     differenceX = pose.position.x - desiredX
     differenceY = pose.position.y - desiredY
     distance = math.sqrt(math.pow(differenceX, 2) + math.pow(differenceY, 2))
 
-    print nextPose.position.x, nextPose.position.y
+    print "From: %d, %d To: %d, %d" % (pose.position.x, pose.position.y, nextPose.position.x, nextPose.position.y)
 
     #compute initial turn amount
     initialTurn = math.degrees(math.atan(differenceY/differenceX))
 
-    if(differenceY <0) and (differenceX>0):
-        initialTurn -= 180
-    elif (differenceY > 0) and (differenceX >0):
-        initialTurn -= 360
 
+    #Mapping the initial turn on a scale of 0-360
+    print differenceX, differenceY, initialTurn
+    if(differenceX < 0) and (differenceY < 0):
+        #Puts the initial Turn in the first quadrant
+        #initial turn will be positive, leave it alone 0-90
+        initialTurn = math.degrees(math.atan(differenceY/differenceX))
+
+    elif (differenceX > 0) and (differenceY < 0):
+        #Puts the initial turn in the 2nd quadrant
+        #Initial turn will be negative so add 180 for angle between 90-180
+        initialTurn += 180
+
+    elif (differenceX > 0) and (differenceY > 0):
+        #Puts initial turn in third quadrant 
+        #Initial turn will be positive change to between 0-270
+        initialTurn += 180
+    elif (differenceX < 0) and (differenceY > 0):
+        #Puts initial turn in the 4th quadrant
+        #Initial turn will be negative change to between 270-360
+        initialTurn += 360
 
     print "spin!" #turn to calculated angle
     print "initialTurn: %d" % initialTurn
-
     rotate(initialTurn)
+    initialTurn = 0;
     print "move!" #move in straight line specified distance to new pose
     driveSmooth(0.2, distance)
     print "spin!" #spin to final angle 
     #rotate(desiredT)
-    print "finalTurn: %d" % desiredT
+    #print "finalTurn: %d" % desiredT
     print "done"
 
 
@@ -189,34 +209,28 @@ def rotateJake(angle):
 def rotate(angle):
     global odom_list
     global pose
-    if (angle > 180 or angle< -180):
-        print "angle is to large or small"
-        if(angle > 180):
-            angle = angle -360
-        elif (angle < -180):
-            angle = angle + 360
 
     vel = Twist();   
     done = True
 
     # set rotation direction
 
-    error = angle-math.degrees(pose.orientation.z)
+    error = angle-theta
     #determine which way to turn based on the angle
     if error > 0:
-        turn = 1
-    else:
         turn = -1
+    else:
+        turn = 1
     
 
     while ((abs(error) >= 6) and not rospy.is_shutdown()):
         #Use this while loop to start the robots motion and determine if you are at the right angle.    
         #print "theta: %d" % math.degrees(pose.orientation.z)
-        print "Error: %d, Rotate Pose %d, To angle: %d" % (error, math.degrees(pose.orientation.z), angle)
+        print "Error: %d, Rotate Pose %d, To angle: %d" % (error, theta, angle)
        
         vel.angular.z = 0.2*turn
         pubDrive.publish(vel)
-        error = angle - (math.degrees(pose.orientation.z))
+        error = angle - (theta)
     vel.angular.z = 0.0
     pubDrive.publish(vel)
 
@@ -235,6 +249,7 @@ def waypointsCallback(gridCells):
 
         wayPoses.append(nextPose)
         navToPose(nextPose)
+    publishTwist(0., 0.)
 
 def findGoal(goal):
     global pose     #Provides access to the current Pose
@@ -271,6 +286,8 @@ def tCallback(event):
     #convert yaw to degrees
     pose.orientation.z = yaw
     theta = math.degrees(yaw)
+    if (theta < 0):
+        theta = 360 + theta
 
 if __name__ == '__main__':
     global pubDrive

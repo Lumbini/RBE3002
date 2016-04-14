@@ -110,9 +110,10 @@ def readGoal(goal):
     goalNode = Node(smallerX, smallerY, nodeGridCopy[smallerIndex], smallerWidth)
     thisPath = AStar.AStar(startPosNode, goalNode, nodeGridCopy)
     print thisPath
-    waypoints = AStar.getWaypoints(thisPath)
+    waypoints = []
+    #waypoints.append(startPosNode)
+    waypoints.extend(AStar.getWaypoints(thisPath))
     waypoints.append(goalNode)
-    waypoints.append(startPosNode)
 
     print "goal", goal.pose
     publishPath(thisPath, waypoints)
@@ -122,7 +123,6 @@ def readGoal(goal):
         newPose = Pose()
         newPose.position.x = newPoseX
         newPose.position.y = newPoseY
-        Driving.navToPose(newPose)
 
 def readStart(startPos):
     global startPosX
