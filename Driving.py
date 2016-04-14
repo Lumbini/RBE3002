@@ -9,6 +9,7 @@ from geometry_msgs.msg import PoseStamped
 from tf.transformations import euler_from_quaternion
 from nav_msgs.msg import GridCells
 from nav_msgs.msg import OccupancyGrid
+import copy
 
 
 wheel_rad = 3.5 / 100.0 #cm
@@ -82,7 +83,7 @@ def navToPose(nextPose):
     rotate(initialTurn)
     initialTurn = 0;
     print "move!" #move in straight line specified distance to new pose
-    driveSmooth(0.2, distance)
+    driveSmooth(0.5, distance)
     print "spin!" #spin to final angle 
     #rotate(desiredT)
     #print "finalTurn: %d" % desiredT
@@ -217,18 +218,38 @@ def rotate(angle):
 
     error = angle-theta
     #determine which way to turn based on the angle
-    if error > 0:
+    if angle < 90 and theta > 180:
+        if theta - angle < 360 - theta + angle:
+            turn = -1
+        else:
+            turn = 1
+    elif angle < 180 and theta > 270:
+        if theta - angle < 360 - theta + angle:
+            turn = -1
+        else:
+            turn = 1
+    elif theta < 180 and angle > 270:
+        if theta + 360 - angle < angle - theta:
+            turn = -1
+        else:
+            turn = 1
+    elif theta < 90 and angle > 180:
+        if theta + 360 - angle < angle - theta:
+            turn = -1
+        else:
+            turn = 1
+    elif error < 0:
         turn = -1
     else:
         turn = 1
     
 
-    while ((abs(error) >= 6) and not rospy.is_shutdown()):
+    while ((abs(error) >= 2) and not rospy.is_shutdown()):
         #Use this while loop to start the robots motion and determine if you are at the right angle.    
         #print "theta: %d" % math.degrees(pose.orientation.z)
         print "Error: %d, Rotate Pose %d, To angle: %d" % (error, theta, angle)
        
-        vel.angular.z = 0.2*turn
+        vel.angular.z = 0.3*turn
         pubDrive.publish(vel)
         error = angle - (theta)
     vel.angular.z = 0.0
@@ -248,7 +269,12 @@ def waypointsCallback(gridCells):
         nextPose.orientation.z = pose.orientation.z
 
         wayPoses.append(nextPose)
+    
+    wayPoseCopy = copy.deepcopy(wayPoses)
+    # wayPoseCopy = reversed(wayPoses)
+    for nextPose in wayPoseCopy:
         navToPose(nextPose)
+
     publishTwist(0., 0.)
 
 def findGoal(goal):

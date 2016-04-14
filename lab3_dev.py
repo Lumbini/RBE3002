@@ -112,7 +112,7 @@ def readGoal(goal):
     print thisPath
     waypoints = []
     #waypoints.append(startPosNode)
-    waypoints.extend(AStar.getWaypoints(thisPath))
+    waypoints.extend(reversed(AStar.getWaypoints(thisPath)))
     waypoints.append(goalNode)
 
     print "goal", goal.pose
@@ -204,7 +204,7 @@ def publishCells(grid, nodes):
         y = int(math.floor(i / smallerWidth))
         if (thisNode.data == 100):
             point=Point()
-            point.x=(x*resolution*3)+offsetX + (1.0* resolution*3) # added secondary offset 
+            point.x=(x*resolution*3)+offsetX + (0.5* resolution*3) # added secondary offset 
             point.y=(y*resolution*3)+offsetY - (-0.5 * resolution*3) # added secondary offset ... Magic ?
             point.z=0
             cells.cells.append(point)

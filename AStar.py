@@ -2,6 +2,7 @@ import math
 import array
 from Node import Node
 import sys
+import copy
 
 def heuristic(node1, node2):
 	## calculate the shortest distance between two nodes
@@ -56,7 +57,9 @@ def getWaypoints(path):
 
 		if(grad1 != grad2):
 			waypoints.append(node2)
-			
+	
+	# waypointsCopy = copy.deepcopy(waypoints)
+	# waypointsCopy = waypoints.reverse()	
 	return waypoints
 	#return waypoints given the certain path
 
