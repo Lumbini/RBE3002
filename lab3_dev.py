@@ -46,31 +46,35 @@ def mapCallBack(data):
         xpos = i - (ypos * width)
         node = Node(xpos, ypos, prob, width)
         nodeGrid.append(node)
-        # print node
 
     smallerWidth = int(math.floor(width/3))
 
     smallerNodeGrid = []
-    for i in range(0, int(math.floor(len(mapData)/3))):
+    for i in range(0, int(math.floor(len(mapData)/9))):
         y = int(math.floor(i / smallerWidth))
         x = int(i - ((math.floor(i/smallerWidth) * smallerWidth)))
         value = 0
         node = Node(x, y, value, smallerWidth)
         smallerNodeGrid.append(node)
 
+    k = -1
     #print len(smallerNodeGrid)
-    for i in range(0, len(nodeGrid) - 1):
+    for i in range(0, len(nodeGrid) - 4):
         node = nodeGrid[i]
         #print (node.data == 100)
         neighbors = node.getAllNeighbors(nodeGrid)
         # print neighbors
-        for neighbor in neighbors:
-            # print neighbor
-            if(neighbor.data == 100):
-                #print int(math.floor(i/3))
-                lowResNode = smallerNodeGrid[int(math.floor(i/3))]	
-                lowResNode.data = 100
+        col = (i % 9)
+        row = int(math.floor(i/width))
+        if((row - 1)%3 == 0):
+            if (i%3 == 1):
+                k = k + 1
+                for neighbor in neighbors:
+                    if(neighbor.data == 100):
+                        lowResNode = smallerNodeGrid[k]	
+                        lowResNode.data = 100
         #print "data: %d" %(smallerNodeGrid[int(math.floor(i/3))].data)
+	
 
     nodeGridCopy = copy.deepcopy(smallerNodeGrid)
 
@@ -78,7 +82,7 @@ def mapCallBack(data):
     for i in range(0, len(nodeGridCopy)):
         #y = math.floor(i / smallerWidth)
         #x = i - (y * smallerWidth)
-        node = nodeGridCopy[i]
+        node = smallerNodeGrid[i]
         if(node.data == 100):
             for neighbor in node.getNeighbors(smallerNodeGrid):
                 index = int(math.floor(neighbor.x + neighbor.y * smallerWidth))
@@ -88,20 +92,22 @@ def mapCallBack(data):
 
     #print nodeGridCopy
     print data.info
+    print k
 
 def readGoal(goal):
     global goalX	
     global goalY
     print 'hi'
  
-    goalX = int(goal.pose.position.x / resolution)
-    goalY = int(goal.pose.position.y / resolution)
+    goalX = int(goal.pose.position.x / 3*resolution)
+    goalY = int(goal.pose.position.y / 3*resolution)
 
-    indexGoal = int(math.floor(goalX + (goalY*width)))
+    indexGoal = int(math.floor(goalX + (goalY*smallerWidth)))
 
     #Convert the goal to a Node object
-    goalNode = Node(goalX, goalY, mapData[indexGoal], width)
+    goalNode = Node(goalX, goalY, mapData[indexGoal], smallerWidth)
     thisPath = AStar.AStar(startPosNode, goalNode, nodeGridCopy)
+    print thisPath
     waypoints = AStar.getWaypoints(thisPath)
     waypoints.append(goalNode)
     waypoints.append(startPosNode)
@@ -121,12 +127,12 @@ def readStart(startPos):
     global startPosY
     global startPosNode
 
-    startPosX = int(startPos.pose.pose.position.x / resolution)
-    startPosY = int(startPos.pose.pose.position.y / resolution)
-    indexStart = int(math.floor(startPosX + (startPosY * width)))
+    startPosX = int(startPos.pose.pose.position.x / 3*resolution)
+    startPosY = int(startPos.pose.pose.position.y / 3*resolution)
+    indexStart = int(math.floor(startPosX + (startPosY * smallerWidth)))
     
     #Cconvert start node to a Node Object. 
-    startPosNode = Node(startPosX, startPosY, mapData[indexStart], width)
+    startPosNode = Node(startPosX, startPosY, mapData[indexStart], smallerWidth)
     print "start ", startPos.pose.pose
 
 def publishPath(path, waypoints):
@@ -176,7 +182,7 @@ def publishCells(grid, nodes):
     k=0
     cells = GridCells()
     cells.header.frame_id = 'map'
-    cells.cell_width = resolution*3 
+    cells.cell_width = resolution*3
     cells.cell_height = resolution*3
 
     cells2 = GridCells()
@@ -184,19 +190,18 @@ def publishCells(grid, nodes):
     cells2.cell_width = resolution*3
     cells2.cell_height = resolution*3
 
-    print len(grid)
     for i in range(0,len(grid)): #height should be set to height of grid
         #print k # used for debugging
         thisNode = grid[i]
         thatNode = nodes[i]
         #print "data %d" % thisNode.data
         #print "x: %d y: %d" %(thisNode.x,thisNode.y)
-        x = i - int(math.floor(i/width))*width
-        y = int(math.floor(i/width))
+        x = int(i % smallerWidth)
+        y = int(math.floor(i / smallerWidth))
         if (thisNode.data == 100):
             point=Point()
-            point.x=(x*resolution*3)+offsetX + (.5 * resolution*3) # added secondary offset 
-            point.y=(y*resolution*3)+offsetY - (-0.0 * resolution*3) # added secondary offset ... Magic ?
+            point.x=(x*resolution*3)+offsetX + (1.0* resolution*3) # added secondary offset 
+            point.y=(y*resolution*3)+offsetY - (-0.5 * resolution*3) # added secondary offset ... Magic ?
             point.z=0
             cells.cells.append(point)
         if(thatNode.data == 100):
