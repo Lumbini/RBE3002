@@ -99,13 +99,15 @@ def readGoal(goal):
     global goalY
     print 'hi'
  
-    goalX = int(goal.pose.position.x / 3*resolution)
-    goalY = int(goal.pose.position.y / 3*resolution)
-
-    indexGoal = int(math.floor(goalX + (goalY*smallerWidth)))
+    goalX = int(goal.pose.position.x / resolution)
+    goalY = int(goal.pose.position.y / resolution)
+    smallerX = int(math.floor(goalX / 3))
+    smallerY = int(math.floor(goalY / 3))
+    indexGoal = int(math.floor(goalX + (goalY * width)))
+    smallerIndex = smallerX + smallerY * smallerWidth
 
     #Convert the goal to a Node object
-    goalNode = Node(goalX, goalY, mapData[indexGoal], smallerWidth)
+    goalNode = Node(smallerX, smallerY, nodeGridCopy[smallerIndex], smallerWidth)
     thisPath = AStar.AStar(startPosNode, goalNode, nodeGridCopy)
     print thisPath
     waypoints = AStar.getWaypoints(thisPath)
@@ -127,12 +129,14 @@ def readStart(startPos):
     global startPosY
     global startPosNode
 
-    startPosX = int(startPos.pose.pose.position.x / 3*resolution)
-    startPosY = int(startPos.pose.pose.position.y / 3*resolution)
-    indexStart = int(math.floor(startPosX + (startPosY * smallerWidth)))
-    
+    startPosX = int(startPos.pose.pose.position.x / resolution)
+    startPosY = int(startPos.pose.pose.position.y / resolution)
+    indexStart = int(math.floor(startPosX + (startPosY * width)))
+    smallerX = int(math.floor(startPosX / 3))
+    smallerY = int(math.floor(startPosY / 3))
+    smallerIndex = smallerX + smallerY * smallerWidth
     #Cconvert start node to a Node Object. 
-    startPosNode = Node(startPosX, startPosY, mapData[indexStart], smallerWidth)
+    startPosNode = Node(smallerX, smallerY, nodeGridCopy[smallerIndex].data, smallerWidth)
     print "start ", startPos.pose.pose
 
 def publishPath(path, waypoints):
@@ -141,25 +145,25 @@ def publishPath(path, waypoints):
 
     cells = GridCells()
     cells.header.frame_id = 'map'
-    cells.cell_width = resolution
-    cells.cell_height = resolution
+    cells.cell_width = resolution * 3
+    cells.cell_height = resolution * 3
 
     cells2 = GridCells()
     cells2.header.frame_id = 'map'
-    cells2.cell_width = resolution
-    cells2.cell_height = resolution
+    cells2.cell_width = resolution * 3
+    cells2.cell_height = resolution * 3
 
     for node in path:
         point = Point()
-        point.x = (node.x * resolution) + (0.5 * resolution)#offsetX + (1.5 * resolution)
-        point.y=(node.y * resolution) + (.5 * resolution) #offsetY - (.5 * resolution)
+        point.x = (node.x * resolution*3) + (0.5 * resolution*3)#offsetX + (1.5 * resolution)
+        point.y=(node.y * resolution*3) + (.5 * resolution*3) #offsetY - (.5 * resolution)
         point.z = 0
         cells.cells.append(point)
 
     for node in waypoints:
         point = Point()
-        point.x = (node.x * resolution) + (0.5 * resolution)#offsetX + (1.5 * resolution)
-        point.y=(node.y * resolution) + (.5 * resolution) #offsetY - (.5 * resolution)
+        point.x = (node.x * resolution*3) + (0.5 * resolution*3)#offsetX + (1.5 * resolution)
+        point.y=(node.y * resolution*3) + (.5 * resolution*3) #offsetY - (.5 * resolution)
         point.z = 0
         cells2.cells.append(point)
 
@@ -233,7 +237,7 @@ def run():
     expand_pub = rospy.Publisher('/expand', GridCells, queue_size=1)
 
     # wait a second for publisher, subscribers, and TF
-    rospy.sleep(10)
+    rospy.sleep(4)
 
     while (1 and not rospy.is_shutdown()):
         publishCells(smallerNodeGrid, nodeGridCopy) #publishing map data every 4 seconds

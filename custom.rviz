@@ -33,12 +33,12 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: LaserScan
+    SyncSource: ""
 Visualization Manager:
   Class: ""
   Displays:
     - Alpha: 0.5
-      Cell Size: 0.05
+      Cell Size: 0.15
       Class: rviz/Grid
       Color: 160; 160; 164
       Enabled: true
@@ -48,7 +48,7 @@ Visualization Manager:
       Name: Grid
       Normal Cell Count: 0
       Offset:
-        X: 0.5
+        X: 0
         Y: 0
         Z: 0
       Plane: XY
@@ -507,11 +507,11 @@ Visualization Manager:
         Value: false
       Name: Current View
       Near Clip Distance: 0.01
-      Scale: 214.407
+      Scale: 58.8377
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz)
-      X: 3.68752
-      Y: 3.44896
+      X: 4.44852
+      Y: 4.62391
     Saved: ~
 Window Geometry:
   Displays:
