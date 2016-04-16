@@ -1,0 +1,11 @@
+<launch>
+
+  <group ns="final">
+    <node pkg="final" name="final" type="final.py"/>
+  </group>
+
+  <group ns="driving">
+    <node pkg="final" name="driving" type="Driving.py"/>
+  </group>
+
+</launch>
