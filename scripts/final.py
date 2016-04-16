@@ -38,61 +38,62 @@ def mapCallBack(data):
     height = data.info.height
     offsetX = data.info.origin.position.x
     offsetY = data.info.origin.position.y
-    nodeGrid = []
+    #nodeGrid = []
 
+    nodeDict = {}
+
+    ## parses the map into a dictionary
     for i in range(0, len(mapData)):
-        prob = mapData[i]
-        ypos = math.floor(i / width)
-        xpos = i - (ypos * width)
-        node = Node(xpos, ypos, prob, width)
-        nodeGrid.append(node)
+        ypos = int(math.floor(i / width)) - (height / 2) ## shifts y downwards on real robot
+        xpos = i - (ypos * width) - (width / 2) ## shifts x left on real robot
+        point = Point(xpos, ypos)
+        node = Node(xpos, ypos, mapData[i], width)
+        nodeDict[point] = node
 
-    smallerWidth = int(math.floor(width/3))
+    smallerWidth = int(math.floor(width / 3))
 
-    smallerNodeGrid = []
-    for i in range(0, int(math.floor(len(mapData)/9))):
-        y = int(math.floor(i / smallerWidth))
-        x = int(i - ((math.floor(i/smallerWidth) * smallerWidth)))
-        value = 0
-        node = Node(x, y, value, smallerWidth)
-        smallerNodeGrid.append(node)
+    smallerNodeDict = {}
+
+    for i in range(0, len(mapData) / 9):
+        ypos = int(math.floor(i / smallerWidth)) - (int(math.floor(i / smallerWidth)) / 2)
+        xpos = int(i - ((math.floor(i/smallerWidth) * smallerWidth))) - (smallerWidth / 2)
+        point = Point(xpos, ypos)
+        node = Node(xpos, ypos, 0, smallerWidth)
+        smallerNodeDict[point] = node
 
     k = -1
-    #print len(smallerNodeGrid)
-    for i in range(0, len(nodeGrid) - 4):
-        node = nodeGrid[i]
-        #print (node.data == 100)
-        neighbors = node.getAllNeighbors(nodeGrid)
-        # print neighbors
-        col = (i % 9)
-        row = int(math.floor(i/width))
-        if((row - 1)%3 == 0):
-            if (i%3 == 1):
-                k = k + 1
-                for neighbor in neighbors:
-                    if(neighbor.data == 100):
-                        lowResNode = smallerNodeGrid[k]	
-                        lowResNode.data = 100
-        #print "data: %d" %(smallerNodeGrid[int(math.floor(i/3))].data)
+
+    for i in range(0, len(nodeDict) - 4):
+        ypos = int(math.floor(i / width)) - (height / 2) ## shifts y downwards on real robot
+        xpos = i - (ypos * width) - (width / 2) ## shifts x left on real robot
+        point = Point(xpos, ypos)
+        node = nodeDict[point]
+
+        ##get ALL neighbors here
+        neighbors = [] ## TODO fix this
+        col = i % 9
+        row = int(math.floor(i / width))
+        if ((row - 1) % 3 == 0):
+            k = k + 1
+            for neighbor in neighbors:
+                if(neighbor.data == 100):
+                    ypos = int(math.floor(k / width)) - (height / 2) ## shifts y downwards on real robot
+                    xpos = k - (ypos * width) - (width / 2) ## shifts x left on real robot
+                    point = Point(xpos, ypos)
+                    lowResNode = smallerNodeDict[point]
+                    lowResNode.data = 100
 	
+    smallerNodeDictCopy = copy.deepcopy(smallerNodeDict)
 
-    nodeGridCopy = copy.deepcopy(smallerNodeGrid)
-
-
-    for i in range(0, len(nodeGridCopy)):
-        #y = math.floor(i / smallerWidth)
-        #x = i - (y * smallerWidth)
-        node = smallerNodeGrid[i]
-        if(node.data == 100):
-            for neighbor in node.getNeighbors(smallerNodeGrid):
-                index = int(math.floor(neighbor.x + neighbor.y * smallerWidth))
-                neighborNode = nodeGridCopy[index]
+    for key in smallerNodeDictCopy:
+        node = smallerNodeDictCopy[key]
+        if node.data == 100:
+            for neighbor in node.getNeighbors(smallerNodeDictCopy): ## TODO fix getNeighbors
+                point = Point(neighbor.x, neighbor.y)
+                neighborNode = smallerNodeDictCopy[point]
                 neighborNode.data = 100
 
 
-    #print nodeGridCopy
-    print data.info
-    print k
 
 def readGoal(goal):
     global goalX	
@@ -173,7 +174,7 @@ def publishPath(path, waypoints):
 
 
 #publishes map to rviz using gridcells type
-
+## TODO fix this so its with dictionaries
 def publishCells(grid, nodes):
     global pub
     global smallerNodeGrid
