@@ -1,6 +1,6 @@
 
 
-class Point:
+class OurPoint:
 
 	## constructor for points
 	def __init__(self, x, y):

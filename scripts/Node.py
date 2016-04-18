@@ -1,4 +1,5 @@
 import math
+import OurPoint
 
 class Node:
 
@@ -27,7 +28,7 @@ class Node:
                 if (x >= 0 and x < self.width) and (y >= 0 and y < (len(grid) / self.width)) and (x != self.x or y != self.y):
                     ## get that node
 
-                    tempPoint = Point(x, y)
+                    tempPoint = OurPoint(x, y)
 
                     tempNode = grid[tempPoint]
                     #print "node in grid ", x, y, tempNode.data
@@ -50,7 +51,7 @@ class Node:
                 ## if that coordinate is within the grid and is not self
                 if (x >= 0 and x < self.width) and (y >= 0 and y < (len(grid) / self.width)) and (x != self.x or y != self.y):
                     ## get that node
-                    tempPoint = Point(x, y)
+                    tempPoint = OurPoint(x, y)
 
                     tempNode = grid[tempPoint]
                     #print "node in grid ", x, y, tempNode.data

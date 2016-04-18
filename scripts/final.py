@@ -14,6 +14,7 @@ import math
 import rospy, tf, numpy, math
 import AStar
 import copy
+import OurPoint
 
 
 # reads in global map
@@ -46,7 +47,7 @@ def mapCallBack(data):
     for i in range(0, len(mapData)):
         ypos = int(math.floor(i / width)) - (height / 2) ## shifts y downwards on real robot
         xpos = i - (ypos * width) - (width / 2) ## shifts x left on real robot
-        point = Point(xpos, ypos)
+        point = OurPoint(xpos, ypos)
         node = Node(xpos, ypos, mapData[i], width)
         nodeDict[point] = node
 
@@ -57,7 +58,7 @@ def mapCallBack(data):
     for i in range(0, len(mapData) / 9):
         ypos = int(math.floor(i / smallerWidth)) - (int(math.floor(i / smallerWidth)) / 2)
         xpos = int(i - ((math.floor(i/smallerWidth) * smallerWidth))) - (smallerWidth / 2)
-        point = Point(xpos, ypos)
+        point = OurPoint(xpos, ypos)
         node = Node(xpos, ypos, 0, smallerWidth)
         smallerNodeDict[point] = node
 
@@ -66,7 +67,7 @@ def mapCallBack(data):
     for i in range(0, len(nodeDict) - 4):
         ypos = int(math.floor(i / width)) - (height / 2) ## shifts y downwards on real robot
         xpos = i - (ypos * width) - (width / 2) ## shifts x left on real robot
-        point = Point(xpos, ypos)
+        point = OurPoint(xpos, ypos)
         node = nodeDict[point]
 
         ##get ALL neighbors here
@@ -79,7 +80,7 @@ def mapCallBack(data):
                 if(neighbor.data == 100):
                     ypos = int(math.floor(k / width)) - (height / 2) ## shifts y downwards on real robot
                     xpos = k - (ypos * width) - (width / 2) ## shifts x left on real robot
-                    point = Point(xpos, ypos)
+                    point = OurPoint(xpos, ypos)
                     lowResNode = smallerNodeDict[point]
                     lowResNode.data = 100
 	
@@ -89,7 +90,7 @@ def mapCallBack(data):
         node = smallerNodeDictCopy[key]
         if node.data == 100:
             for neighbor in node.getNeighbors(smallerNodeDictCopy): ## TODO fix getNeighbors
-                point = Point(neighbor.x, neighbor.y)
+                point = OurPoint(neighbor.x, neighbor.y)
                 neighborNode = smallerNodeDictCopy[point]
                 neighborNode.data = 100
 
@@ -174,7 +175,6 @@ def publishPath(path, waypoints):
 
 
 #publishes map to rviz using gridcells type
-## TODO fix this so its with dictionaries
 def publishCells(grid, nodes):
     global pub
     global smallerNodeGrid
@@ -195,26 +195,23 @@ def publishCells(grid, nodes):
     cells2.cell_width = resolution*3
     cells2.cell_height = resolution*3
 
-    for i in range(0,len(grid)): #height should be set to height of grid
-        #print k # used for debugging
-        thisNode = grid[i]
-        thatNode = nodes[i]
-        #print "data %d" % thisNode.data
-        #print "x: %d y: %d" %(thisNode.x,thisNode.y)
-        x = int(i % smallerWidth)
-        y = int(math.floor(i / smallerWidth))
-        if (thisNode.data == 100):
+    for key in grid:
+        thisNode = grid[key]
+        thatNode = nodes[key]
+
+        if thisNode.data == 100:
             point=Point()
-            point.x=(x*resolution*3)+offsetX + (0.5* resolution*3) # added secondary offset 
-            point.y=(y*resolution*3)+offsetY - (-0.5 * resolution*3) # added secondary offset ... Magic ?
+            point.x=(key.x*resolution*3)+offsetX + (0.5* resolution*3) # added secondary offset 
+            point.y=(key.y*resolution*3)+offsetY - (-0.5 * resolution*3) # added secondary offset ... Magic ?
             point.z=0
             cells.cells.append(point)
         if(thatNode.data == 100):
             point=Point()
-            point.x=(x*resolution*3)+offsetX + (.5 * resolution*3) # added secondary offset 
-            point.y=(y*resolution*3)+offsetY - (-0.5 * resolution*3) # added secondary offset ... Magic ?
+            point.x=(key.x*resolution*3)+offsetX + (.5 * resolution*3) # added secondary offset 
+            point.y=(key.y*resolution*3)+offsetY - (-0.5 * resolution*3) # added secondary offset ... Magic ?
             point.z=0
             cells2.cells.append(point)
+
     #print cells.cells
     pub.publish(cells)
     expand_pub.publish(cells2)
