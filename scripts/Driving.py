@@ -1,4 +1,16 @@
 #!/usr/bin/env python
+#   
+#   RBE 3002 - D 2016
+#   Worcester Polytechnic Institute
+#   
+#   Tom Farro
+#   Jacob Hackett
+#   Lumbini Parnas
+#
+#   This file contains the code needed to drive the turtle bot using the path 
+#   output by the Astar algorithm.   
+#
+
 
 import rospy, tf, numpy, math
 from kobuki_msgs.msg import BumperEvent
@@ -37,14 +49,6 @@ def navToPose(nextPose):
     #capture desired x and y positions
     desiredY = nextPose.position.y
     desiredX = nextPose.position.x
-    #capture desired angle
-    # quat = nextPose.orientation
-    # q = [quat.x, quat.y, quat.z, quat.w]
-
-    # roll, pitch, yaw = euler_from_quaternion(q)
-    # desiredT = yaw * (180.0/math.pi)
-
-    # print q, roll, pitch, yaw, desiredT
 
     #compute distance to target
     differenceX = pose.position.x - desiredX
@@ -84,9 +88,6 @@ def navToPose(nextPose):
     initialTurn = 0;
     print "move!" #move in straight line specified distance to new pose
     driveSmooth(0.5, distance)
-    print "spin!" #spin to final angle 
-    #rotate(desiredT)
-    #print "finalTurn: %d" % desiredT
     print "done"
 
 
@@ -144,23 +145,28 @@ def driveSmooth(speed, distance):
     """This function accepts a speed and a distance for the robot to move in a smoothed straight line."""
     initX = pose.position.x
     initY = pose.position.y
-    rampVel = 0.0
-    atDest = 0
-    percent = 0.5
+
+    rampVel = 0.0   #Starting the ramp vel at 0
+    atDest = 0      #Check if the robot is at the destination
+    percent = 0.5   #Ramping speed percent
     increment = speed / ((percent * (distance/speed))/ 0.03)
     while(atDest == 0 and not rospy.is_shutdown()):
         
         currentX = pose.position.x
         currentY = pose.position.y
         dist = math.sqrt(math.pow((currentX - initX), 2) + math.pow((currentY - initY), 2))
+        
+        #if ramp velocity is 0 stop the robot 
         if (rampVel < 0):
             rampVel = 0
             publishTwist(rampVel, 0)
             print "Pub1: "+ str(rampVel)
+
+        #If the distance traveled is greater or equal to distance to goal stop the robot
         if (dist >= distance):
             publishTwist(0, 0)
             print "Pub2: "+ str(rampVel)
-            atDest = 1
+            atDest = 1      #the robot is at destination
         else:
             if((distance - dist) <= distance * percent and rampVel >= 0):
                 rampVel -= increment
@@ -175,38 +181,6 @@ def driveSmooth(speed, distance):
                 print "Pub5: " + str(rampVel)
 	rospy.sleep(0.03)
 
-def rotateJake(angle):
-    global odom_list
-    global pose
-    if (angle > 180 or angle < -180):
-        print "angle is too large or small"
-        if(angle >= 180):
-            angle = angle -360
-        elif (angle <= -180):
-            angle = angle + 360
-    vel = Twist()   
-    done = True
-
-    # set rotation direction
-    error = angle-math.degrees(pose.orientation.z)
-
-    if error >= 0:
-        turn = "left"
-    else:
-        turn = "right"
-
-    while ((abs(error) >= 6) and not rospy.is_shutdown()):
-        print "To angle: %d" % angle    
-        print "theta: %d" % math.degrees(pose.orientation.z) ## prints for debugging
-        if turn == "right":
-            spinWheels(-.02, .02, .1) 
-        else:
-            spinWheels(.02, -.02, .1) 
-        currentAngle = math.degrees(pose.orientation.z)
-        error = angle - currentAngle
-    vel.angular.z = 0.0
-    pubDrive.publish(vel)
-
 def rotate(angle):
     global odom_list
     global pose
@@ -215,9 +189,11 @@ def rotate(angle):
     done = True
 
     # set rotation direction
-
     error = angle-theta
+
     #determine which way to turn based on the angle
+    #turn = -1 (clockwise rotation)
+    #turn = 1 (counter-clockwise rotation)
     if angle < 90 and theta > 180:
         if theta - angle < 360 - theta + angle:
             turn = -1
@@ -326,11 +302,11 @@ if __name__ == '__main__':
     rospy.init_node('Driving_AStar')
 
     #Driving publisher
-    pubDrive = rospy.Publisher('cmd_vel_mux/input/teleop', Twist, None, queue_size=10) # Publisher for commanding robot motion
-    goal_sub_Drive = rospy.Subscriber('/goal_lab3', PoseStamped, findGoal, queue_size=1) #Subscribe to the set goal
-    waypoints_sub = rospy.Subscriber('/waypoints', GridCells, waypointsCallback, queue_size=1) #Subscribe to the set waypoints
+    pubDrive = rospy.Publisher('cmd_vel_mux/input/teleop', Twist, None, queue_size=10)          # Publisher for commanding robot motion
+    goal_sub_Drive = rospy.Subscriber('/goal_lab3', PoseStamped, findGoal, queue_size=1)        #Subscribe to the set goal
+    waypoints_sub = rospy.Subscriber('/waypoints', GridCells, waypointsCallback, queue_size=1)  #Subscribe to the set waypoints
     rospy.Timer(rospy.Duration(.01), tCallback) # timer callback for robot location
-    odom_list = tf.TransformListener() #listner for robot location
+    odom_list = tf.TransformListener()          #listner for robot location
 
     rospy.sleep(2)
 
