@@ -39,14 +39,14 @@ def mapCallBack(data):
     height = data.info.height
     offsetX = data.info.origin.position.x
     offsetY = data.info.origin.position.y
-    #nodeGrid = []
 
     nodeDict = {}
 
     ## parses the map into a dictionary
     for i in range(0, len(mapData)):
-        ypos = int(math.floor(i / width)) - (height / 2) ## shifts y downwards on real robot
+        ypos = int(math.floor(i / width)) ## shifts y downwards on real robot
         xpos = i - (ypos * width) - (width / 2) ## shifts x left on real robot
+        ypos = ypos - (height / 2)
         point = OurPoint(xpos, ypos)
         node = Node(xpos, ypos, mapData[i], width)
         nodeDict[point] = node
@@ -56,32 +56,40 @@ def mapCallBack(data):
     smallerNodeDict = {}
 
     for i in range(0, len(mapData) / 9):
-        ypos = int(math.floor(i / smallerWidth)) - (int(math.floor(i / smallerWidth)) / 2)
-        xpos = int(i - ((math.floor(i/smallerWidth) * smallerWidth))) - (smallerWidth / 2)
+        ypos = int(math.floor(i / smallerWidth))
+        xpos = int(i - (ypos * smallerWidth)) - (smallerWidth / 2)
+        ypos = ypos  - (height / 6)
         point = OurPoint(xpos, ypos)
         node = Node(xpos, ypos, 0, smallerWidth)
+        #print node
         smallerNodeDict[point] = node
 
     k = -1
 
     for i in range(0, len(nodeDict) - 4):
-        ypos = int(math.floor(i / width)) - (height / 2) ## shifts y downwards on real robot
+        ypos = int(math.floor(i / width)) ## shifts y downwards on real robot
         xpos = i - (ypos * width) - (width / 2) ## shifts x left on real robot
+        ypos = ypos  - (height / 2)
         point = OurPoint(xpos, ypos)
         node = nodeDict[point]
-
+        
+        #print node
         ##get ALL neighbors here
-        neighbors = [] ## TODO fix this
+        #print neighbors
         col = i % 9
         row = int(math.floor(i / width))
         if ((row - 1) % 3 == 0):
             k = k + 1
+            neighbors = node.getAllNeighbors(nodeDict)
             for neighbor in neighbors:
                 if(neighbor.data == 100):
-                    ypos = int(math.floor(k / width)) - (height / 2) ## shifts y downwards on real robot
-                    xpos = k - (ypos * width) - (width / 2) ## shifts x left on real robot
-                    point = OurPoint(xpos, ypos)
-                    lowResNode = smallerNodeDict[point]
+                    ypos2 = int(math.floor(k / smallerWidth))
+                    xpos2 = k - (ypos * smallerWidth) - (smallerWidth / 2)
+                    ypos2 = ypos2 - (height / 6)
+                    point2 = OurPoint(xpos2, ypos2)
+                    print point2
+                    print smallerNodeDict
+                    lowResNode = smallerNodeDict[point2]
                     lowResNode.data = 100
 	
     smallerNodeDictCopy = copy.deepcopy(smallerNodeDict)
@@ -89,7 +97,7 @@ def mapCallBack(data):
     for key in smallerNodeDictCopy:
         node = smallerNodeDictCopy[key]
         if node.data == 100:
-            for neighbor in node.getNeighbors(smallerNodeDictCopy): ## TODO fix getNeighbors
+            for neighbor in node.getNeighbors(smallerNodeDictCopy):
                 point = OurPoint(neighbor.x, neighbor.y)
                 neighborNode = smallerNodeDictCopy[point]
                 neighborNode.data = 100
@@ -201,14 +209,14 @@ def publishCells(grid, nodes):
 
         if thisNode.data == 100:
             point=Point()
-            point.x=(key.x*resolution*3)+offsetX + (0.5* resolution*3) # added secondary offset 
-            point.y=(key.y*resolution*3)+offsetY - (-0.5 * resolution*3) # added secondary offset ... Magic ?
+            point.x=(thisNode.x*resolution*3)+offsetX + (0.5* resolution*3) # added secondary offset 
+            point.y=(thisNode.y*resolution*3)+offsetY - (-0.5 * resolution*3) # added secondary offset ... Magic ?
             point.z=0
             cells.cells.append(point)
         if(thatNode.data == 100):
             point=Point()
-            point.x=(key.x*resolution*3)+offsetX + (.5 * resolution*3) # added secondary offset 
-            point.y=(key.y*resolution*3)+offsetY - (-0.5 * resolution*3) # added secondary offset ... Magic ?
+            point.x=(thatNode.x*resolution*3)+offsetX + (.5 * resolution*3) # added secondary offset 
+            point.y=(thatNode.y*resolution*3)+offsetY - (-0.5 * resolution*3) # added secondary offset ... Magic ?
             point.z=0
             cells2.cells.append(point)
 
@@ -239,7 +247,7 @@ def run():
 
     while (1 and not rospy.is_shutdown()):
         publishCells(smallerNodeDict, smallerNodeDictCopy) #publishing map data every 4 seconds
-        #rospy.sleep(6) 
+        rospy.sleep(4) 
         print("Complete")
 
 
