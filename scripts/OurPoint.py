@@ -1,4 +1,4 @@
-
+import math
 
 class OurPoint:
 
@@ -16,3 +16,6 @@ class OurPoint:
 	            return False
 	    else:
 	        return False
+
+	def __hash__(self):
+		return (pow(self.x, 17) + pow(self.y, 19))
