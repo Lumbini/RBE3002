@@ -27,9 +27,9 @@ def mapCallBack(data):
     global resolution
     global offsetX
     global offsetY
-    global nodeGridCopy
-    global nodeGrid
-    global smallerNodeGrid
+    global smallerNodeDictCopy
+    global nodeDict
+    global smallerNodeDict
     global smallerWidth
 
     mapgrid = data
@@ -238,8 +238,8 @@ def run():
     rospy.sleep(4)
 
     while (1 and not rospy.is_shutdown()):
-        publishCells(smallerNodeGrid, nodeGridCopy) #publishing map data every 4 seconds
-        rospy.sleep(4) 
+        publishCells(smallerNodeDict, smallerNodeDictCopy) #publishing map data every 4 seconds
+        rospy.sleep(6) 
         print("Complete")
 
 
