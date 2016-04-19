@@ -14,7 +14,7 @@ import math
 import rospy, tf, numpy, math
 import AStar
 import copy
-import OurPoint
+from OurPoint import OurPoint
 
 
 # reads in global map
@@ -239,7 +239,7 @@ def run():
 
     while (1 and not rospy.is_shutdown()):
         publishCells(smallerNodeDict, smallerNodeDictCopy) #publishing map data every 4 seconds
-        rospy.sleep(6) 
+        #rospy.sleep(6) 
         print("Complete")
 
 
