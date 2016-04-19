@@ -18,4 +18,8 @@ class OurPoint:
 	        return False
 
 	def __hash__(self):
-		return (pow(self.x, 17) + pow(self.y, 19))
+		return (pow(self.x, 4) + pow(self.y, 9))
+
+	# def __str__(self):
+	# 	return "Point %d %d" % (self.x, self.y)
+

@@ -1,5 +1,5 @@
 import math
-import OurPoint
+from OurPoint import OurPoint
 
 class Node:
 
@@ -25,7 +25,7 @@ class Node:
         for x in range(int(self.x - 1), int(self.x + 2)):
             for y in range(int(self.y - 1), int(self.y + 2)):
                 ## if that coordinate is within the grid and is not self
-                if (x >= 0 and x < self.width) and (y >= 0 and y < (len(grid) / self.width)) and (x != self.x or y != self.y):
+                if (x >= (-self.width / 2) and x < self.width / 2) and (y >= (-self.width / 2) and y < (len(grid) / (2* self.width))) and (x != self.x or y != self.y):
                     ## get that node
 
                     tempPoint = OurPoint(x, y)
@@ -49,7 +49,7 @@ class Node:
         for x in range(int(self.x - 1), int(self.x + 2)):
             for y in range(int(self.y - 1), int(self.y + 2)):
                 ## if that coordinate is within the grid and is not self
-                if (x >= 0 and x < self.width) and (y >= 0 and y < (len(grid) / self.width)) and (x != self.x or y != self.y):
+                if (x >= (-self.width / 2) and x < self.width / 2) and (y >= (-self.width / 2) and y < (len(grid) / (2* self.width))) and (x != self.x or y != self.y):
                     ## get that node
                     tempPoint = OurPoint(x, y)
 
