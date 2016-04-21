@@ -95,9 +95,9 @@ def mapCallBack(data):
     smallerNodeDictCopy = copy.deepcopy(smallerNodeDict)
 
     for key in smallerNodeDictCopy:
-        node = smallerNodeDictCopy[key]
+        node = smallerNodeDict[key]
         if node.data == 100:
-            for neighbor in node.getNeighbors(smallerNodeDictCopy):
+            for neighbor in node.getAllNeighbors(smallerNodeDict):
                 point = OurPoint(neighbor.x, neighbor.y)
                 neighborNode = smallerNodeDictCopy[point]
                 neighborNode.data = 100
@@ -111,14 +111,16 @@ def readGoal(goal):
  
     goalX = int(goal.pose.position.x / resolution)
     goalY = int(goal.pose.position.y / resolution)
-    smallerX = int(math.floor(goalX / 3))
-    smallerY = int(math.floor(goalY / 3))
+    smallerX = int(math.ceil(goalX / 3))
+    smallerY = int(math.ceil(goalY / 3))
     indexGoal = int(math.floor(goalX + (goalY * width)))
     smallerIndex = smallerX + smallerY * smallerWidth
 
+    goalPoint = OurPoint(smallerX, smallerY)
+
     #Convert the goal to a Node object
-    goalNode = Node(smallerX, smallerY, nodeGridCopy[smallerIndex], smallerWidth)
-    thisPath = AStar.AStar(startPosNode, goalNode, nodeGridCopy)
+    goalNode = Node(smallerX, smallerY, smallerNodeDictCopy[goalPoint], smallerWidth)
+    thisPath = AStar.AStar(startPosNode, goalNode, smallerNodeDictCopy)
     print thisPath
     waypoints = []
     #waypoints.append(startPosNode)
@@ -142,11 +144,13 @@ def readStart(startPos):
     startPosX = int(startPos.pose.pose.position.x / resolution)
     startPosY = int(startPos.pose.pose.position.y / resolution)
     indexStart = int(math.floor(startPosX + (startPosY * width)))
-    smallerX = int(math.floor(startPosX / 3))
-    smallerY = int(math.floor(startPosY / 3))
+    smallerX = int(math.ceil(startPosX / 3))
+    smallerY = int(math.ceil(startPosY / 3))
     smallerIndex = smallerX + smallerY * smallerWidth
+
+    startPoint = OurPoint(smallerX, smallerY)
     #Cconvert start node to a Node Object. 
-    startPosNode = Node(smallerX, smallerY, nodeGridCopy[smallerIndex].data, smallerWidth)
+    startPosNode = Node(smallerX, smallerY, smallerNodeDictCopy[startPoint].data, smallerWidth)
     print "start ", startPos.pose.pose
 
 def publishPath(path, waypoints):
