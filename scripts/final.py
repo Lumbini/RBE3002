@@ -55,40 +55,40 @@ def mapCallBack(data):
 
     smallerNodeDict = {}
 
+
     for i in range(0, len(mapData) / 9):
         ypos = int(math.floor(i / smallerWidth))
         xpos = int(i - (ypos * smallerWidth)) - (smallerWidth / 2)
         ypos = ypos  - (height / 6)
         point = OurPoint(xpos, ypos)
         node = Node(xpos, ypos, 0, smallerWidth)
-        #print node
+        print node
         smallerNodeDict[point] = node
 
     k = -1
 
-    for i in range(0, len(nodeDict) - 4):
-        ypos = int(math.floor(i / width)) ## shifts y downwards on real robot
-        xpos = i - (ypos * width) - (width / 2) ## shifts x left on real robot
-        ypos = ypos  - (height / 2)
-        point = OurPoint(xpos, ypos)
-        node = nodeDict[point]
+    for key in nodeDict:
+        
+        node = nodeDict[key]
         
         #print node
         ##get ALL neighbors here
         #print neighbors
-        col = i % 9
-        row = int(math.floor(i / width))
-        if ((row - 1) % 3 == 0):
-            k = k + 1
+        if ((node.x - 1) % 3 == 0 and (node.y - 1) % 3 == 0):
             neighbors = node.getAllNeighbors(nodeDict)
             for neighbor in neighbors:
                 if(neighbor.data == 100):
-                    ypos2 = int(math.floor(k / smallerWidth))
-                    xpos2 = k - (ypos * smallerWidth) - (smallerWidth / 2)
-                    ypos2 = ypos2 - (height / 6)
+
+                    xpos2 = math.ceil(node.x / 3)
+                    ypos2 = math.ceil(node.y / 3)
+                    print neighbor.x, neighbor.y, smallerWidth, ypos2
+
                     point2 = OurPoint(xpos2, ypos2)
                     print point2
-                    print smallerNodeDict
+                    if point2 in smallerNodeDict:
+                        print "exists", smallerNodeDict.get(point2)
+                    else:
+                        print "doesnt exist"
                     lowResNode = smallerNodeDict[point2]
                     lowResNode.data = 100
 	
@@ -232,6 +232,8 @@ def run():
     global pubpath
     global pubway
     global expand_pub
+    global smallerNodeDict
+    global smallerNodeDictCopy
   
     rospy.init_node('lab3')
     sub = rospy.Subscriber("/map", OccupancyGrid, mapCallBack)
@@ -243,11 +245,11 @@ def run():
     expand_pub = rospy.Publisher('/expand', GridCells, queue_size=1)
 
     # wait a second for publisher, subscribers, and TF
-    rospy.sleep(4)
+    rospy.sleep(6)
 
     while (1 and not rospy.is_shutdown()):
         publishCells(smallerNodeDict, smallerNodeDictCopy) #publishing map data every 4 seconds
-        rospy.sleep(4) 
+        rospy.sleep(6) 
         print("Complete")
 
 
