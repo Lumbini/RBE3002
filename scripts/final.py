@@ -55,49 +55,49 @@ def mapCallBack(data):
 
     smallerNodeDict = {}
 
+
     for i in range(0, len(mapData) / 9):
         ypos = int(math.floor(i / smallerWidth))
         xpos = int(i - (ypos * smallerWidth)) - (smallerWidth / 2)
         ypos = ypos  - (height / 6)
         point = OurPoint(xpos, ypos)
         node = Node(xpos, ypos, 0, smallerWidth)
-        #print node
+        print node
         smallerNodeDict[point] = node
 
     k = -1
 
-    for i in range(0, len(nodeDict) - 4):
-        ypos = int(math.floor(i / width)) ## shifts y downwards on real robot
-        xpos = i - (ypos * width) - (width / 2) ## shifts x left on real robot
-        ypos = ypos  - (height / 2)
-        point = OurPoint(xpos, ypos)
-        node = nodeDict[point]
+    for key in nodeDict:
+        
+        node = nodeDict[key]
         
         #print node
         ##get ALL neighbors here
         #print neighbors
-        col = i % 9
-        row = int(math.floor(i / width))
-        if ((row - 1) % 3 == 0):
-            k = k + 1
+        if ((node.x - 1) % 3 == 0 and (node.y - 1) % 3 == 0):
             neighbors = node.getAllNeighbors(nodeDict)
             for neighbor in neighbors:
                 if(neighbor.data == 100):
-                    ypos2 = int(math.floor(k / smallerWidth))
-                    xpos2 = k - (ypos * smallerWidth) - (smallerWidth / 2)
-                    ypos2 = ypos2 - (height / 6)
+
+                    xpos2 = math.ceil(node.x / 3)
+                    ypos2 = math.ceil(node.y / 3)
+                    print neighbor.x, neighbor.y, smallerWidth, ypos2
+
                     point2 = OurPoint(xpos2, ypos2)
                     print point2
-                    print smallerNodeDict
+                    if point2 in smallerNodeDict:
+                        print "exists", smallerNodeDict.get(point2)
+                    else:
+                        print "doesnt exist"
                     lowResNode = smallerNodeDict[point2]
                     lowResNode.data = 100
 	
     smallerNodeDictCopy = copy.deepcopy(smallerNodeDict)
 
     for key in smallerNodeDictCopy:
-        node = smallerNodeDictCopy[key]
+        node = smallerNodeDict[key]
         if node.data == 100:
-            for neighbor in node.getNeighbors(smallerNodeDictCopy):
+            for neighbor in node.getAllNeighbors(smallerNodeDict):
                 point = OurPoint(neighbor.x, neighbor.y)
                 neighborNode = smallerNodeDictCopy[point]
                 neighborNode.data = 100
@@ -111,14 +111,16 @@ def readGoal(goal):
  
     goalX = int(goal.pose.position.x / resolution)
     goalY = int(goal.pose.position.y / resolution)
-    smallerX = int(math.floor(goalX / 3))
-    smallerY = int(math.floor(goalY / 3))
+    smallerX = int(math.ceil(goalX / 3))
+    smallerY = int(math.ceil(goalY / 3))
     indexGoal = int(math.floor(goalX + (goalY * width)))
     smallerIndex = smallerX + smallerY * smallerWidth
 
+    goalPoint = OurPoint(smallerX, smallerY)
+
     #Convert the goal to a Node object
-    goalNode = Node(smallerX, smallerY, nodeGridCopy[smallerIndex], smallerWidth)
-    thisPath = AStar.AStar(startPosNode, goalNode, nodeGridCopy)
+    goalNode = Node(smallerX, smallerY, smallerNodeDictCopy[goalPoint], smallerWidth)
+    thisPath = AStar.AStar(startPosNode, goalNode, smallerNodeDictCopy)
     print thisPath
     waypoints = []
     #waypoints.append(startPosNode)
@@ -142,11 +144,13 @@ def readStart(startPos):
     startPosX = int(startPos.pose.pose.position.x / resolution)
     startPosY = int(startPos.pose.pose.position.y / resolution)
     indexStart = int(math.floor(startPosX + (startPosY * width)))
-    smallerX = int(math.floor(startPosX / 3))
-    smallerY = int(math.floor(startPosY / 3))
+    smallerX = int(math.ceil(startPosX / 3))
+    smallerY = int(math.ceil(startPosY / 3))
     smallerIndex = smallerX + smallerY * smallerWidth
+
+    startPoint = OurPoint(smallerX, smallerY)
     #Cconvert start node to a Node Object. 
-    startPosNode = Node(smallerX, smallerY, nodeGridCopy[smallerIndex].data, smallerWidth)
+    startPosNode = Node(smallerX, smallerY, smallerNodeDictCopy[startPoint].data, smallerWidth)
     print "start ", startPos.pose.pose
 
 def publishPath(path, waypoints):
@@ -246,6 +250,8 @@ def run():
     global pubpath
     global pubway
     global expand_pub
+    global smallerNodeDict
+    global smallerNodeDictCopy
   
     rospy.init_node('lab3')
     sub = rospy.Subscriber("/map", OccupancyGrid, mapCallBack)
@@ -257,11 +263,11 @@ def run():
     expand_pub = rospy.Publisher('/expand', GridCells, queue_size=1)
 
     # wait a second for publisher, subscribers, and TF
-    rospy.sleep(4)
+    rospy.sleep(6)
 
     while (1 and not rospy.is_shutdown()):
         publishCells(smallerNodeDict, smallerNodeDictCopy) #publishing map data every 4 seconds
-        rospy.sleep(4) 
+        rospy.sleep(6) 
         print("Complete")
 
 
