@@ -224,6 +224,20 @@ def publishCells(grid, nodes):
     pub.publish(cells)
     expand_pub.publish(cells2)
 
+## should make a list of places bordering unknown space
+def findFrontiers(grid):
+    
+    frontiers = []
+
+    for key in grid:
+        node = grid[key]
+        neighbors = node.getAllNeighbors(grid)
+
+        if node.data == -1:
+            for neighbor in neighbors:
+                if neighbor.data != -1 and neighbor.data != 100:
+                    frontiers.append(node)
+                    break
                    
 
 #Main handler of the project
