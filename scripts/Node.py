@@ -1,4 +1,5 @@
 import math
+from OurPoint import OurPoint
 
 class Node:
 
@@ -13,7 +14,7 @@ class Node:
 
     ## returns a node from the grid
     def getNode(self, x, y, grid):
-        return grid[x + y * self.width]
+        return grid[Point(x, y)]
 
     ## returns an array of neighbors to the node on the grid
     def getNeighbors(self, grid):
@@ -24,9 +25,12 @@ class Node:
         for x in range(int(self.x - 1), int(self.x + 2)):
             for y in range(int(self.y - 1), int(self.y + 2)):
                 ## if that coordinate is within the grid and is not self
-                if (x >= 0 and x < self.width) and (y >= 0 and y < (len(grid) / self.width)) and (x != self.x or y != self.y):
+                if (x >= (-self.width / 2) and x < self.width / 2) and (y >= (-self.width / 2) and y < (len(grid) / (2* self.width))) and (x != self.x or y != self.y):
                     ## get that node
-                    tempNode = self.getNode(x, y, grid)
+
+                    tempPoint = OurPoint(x, y)
+
+                    tempNode = grid[tempPoint]
                     #print "node in grid ", x, y, tempNode.data
                     ## if the node is not null, is not a wall, and is not unknown
                     if tempNode != None and tempNode.data != 100 and tempNode.data != -1:
@@ -45,9 +49,11 @@ class Node:
         for x in range(int(self.x - 1), int(self.x + 2)):
             for y in range(int(self.y - 1), int(self.y + 2)):
                 ## if that coordinate is within the grid and is not self
-                if (x >= 0 and x < self.width) and (y >= 0 and y < (len(grid) / self.width)) and (x != self.x or y != self.y):
+                if (x >= (-self.width / 2) and x < self.width / 2) and (y >= (-self.width / 2) and y < (len(grid) / (2* self.width))) and (x != self.x or y != self.y):
                     ## get that node
-                    tempNode = self.getNode(x, y, grid)
+                    tempPoint = OurPoint(x, y)
+
+                    tempNode = grid[tempPoint]
                     #print "node in grid ", x, y, tempNode.data
                     ## if the node is not null, is not a wall, and is not unknown
                     if tempNode != None and tempNode.data != -1:
