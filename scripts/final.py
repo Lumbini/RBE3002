@@ -102,8 +102,6 @@ def mapCallBack(data):
                 neighborNode = smallerNodeDictCopy[point]
                 neighborNode.data = 100
 
-
-
 def readGoal(goal):
     global goalX	
     global goalY
@@ -153,6 +151,19 @@ def readStart(startPos):
     startPosNode = Node(smallerX, smallerY, smallerNodeDictCopy[startPoint].data, smallerWidth)
     print "start ", startPos.pose.pose
 
+def BFS(grid, startNode):
+    frontiers = []
+    toExplore = []
+    toExplore.add(startNode.getAllNeighbors(grid))
+
+    while (frontiers is empty):
+        for neighbor in toExplore:
+            if (neighbor.data != -1 and neighbor.data != 100):
+                toExplore.extend(neighbor.getAllNeighbors(grid))
+                toExplore.remove(neighbor)
+            else if (neighbor.data == -1):
+                frontiers.append(neighbor)
+    
 def publishPath(path, waypoints):
     global pubpath
     global pubway
@@ -183,8 +194,6 @@ def publishPath(path, waypoints):
 
     pubpath.publish(cells)
     pubway.publish(cells2)
-
-
 
 #publishes map to rviz using gridcells type
 def publishCells(grid, nodes):
