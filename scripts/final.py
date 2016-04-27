@@ -112,12 +112,12 @@ def findFrontiers(grid):
     
     frontiers = []
 
-    for key in grid:
+    for key in grid:    ## go through grid and check if the node is -1
         node = grid[key]
         neighbors = node.getAllNeighbors(grid)
 
         if node.data == -1:
-            for neighbor in neighbors:
+            for neighbor in neighbors: ## check if the neighbor of that -1 is known space and is not an obstacle
                 if neighbor.data != -1 and neighbor.data != 100:
                     frontiers.append(node)
                     break
