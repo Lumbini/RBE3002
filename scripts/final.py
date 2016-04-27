@@ -153,82 +153,9 @@ def readStart(startPos):
     startPosNode = Node(smallerX, smallerY, smallerNodeDictCopy[startPoint].data, smallerWidth)
     print "start ", startPos.pose.pose
 
-def publishPath(path, waypoints):
-    global pubpath
-    global pubway
-
-    cells = GridCells()
-    cells.header.frame_id = 'map'
-    cells.cell_width = resolution * 3
-    cells.cell_height = resolution * 3
-
-    cells2 = GridCells()
-    cells2.header.frame_id = 'map'
-    cells2.cell_width = resolution * 3
-    cells2.cell_height = resolution * 3
-
-    for node in path:
-        point = Point()
-        point.x = (node.x * resolution*3) + (0.5 * resolution*3)#offsetX + (1.5 * resolution)
-        point.y=(node.y * resolution*3) + (.5 * resolution*3) #offsetY - (.5 * resolution)
-        point.z = 0
-        cells.cells.append(point)
-
-    for node in waypoints:
-        point = Point()
-        point.x = (node.x * resolution*3) + (0.5 * resolution*3)#offsetX + (1.5 * resolution)
-        point.y=(node.y * resolution*3) + (.5 * resolution*3) #offsetY - (.5 * resolution)
-        point.z = 0
-        cells2.cells.append(point)
-
-    pubpath.publish(cells)
-    pubway.publish(cells2)
-
-
-
-#publishes map to rviz using gridcells type
-def publishCells(grid, nodes):
-    global pub
-    global smallerNodeGrid
-    global offsetY
-    global offsetX
-
-    print "publishing"
-
-    # resolution and offset of the map
-    k=0
-    cells = GridCells()
-    cells.header.frame_id = 'map'
-    cells.cell_width = resolution*3
-    cells.cell_height = resolution*3
-
-    cells2 = GridCells()
-    cells2.header.frame_id = 'map'
-    cells2.cell_width = resolution*3
-    cells2.cell_height = resolution*3
-
-    for key in grid:
-        thisNode = grid[key]
-        thatNode = nodes[key]
-
-        if thisNode.data == 100:
-            point=Point()
-            point.x=(thisNode.x*resolution*3)+offsetX + (0.5* resolution*3) # added secondary offset 
-            point.y=(thisNode.y*resolution*3)+offsetY - (-0.5 * resolution*3) # added secondary offset ... Magic ?
-            point.z=0
-            cells.cells.append(point)
-        if(thatNode.data == 100):
-            point=Point()
-            point.x=(thatNode.x*resolution*3)+offsetX + (.5 * resolution*3) # added secondary offset 
-            point.y=(thatNode.y*resolution*3)+offsetY - (-0.5 * resolution*3) # added secondary offset ... Magic ?
-            point.z=0
-            cells2.cells.append(point)
-
-    #print cells.cells
-    pub.publish(cells)
-    expand_pub.publish(cells2)
 
 ## should make a list of places bordering unknown space
+## this can become much more interesting if we want, using a labeling algorithm to identify spaces and then we can find the centroid of the space
 def findFrontiers(grid):
     
     frontiers = []
@@ -242,7 +169,101 @@ def findFrontiers(grid):
                 if neighbor.data != -1 and neighbor.data != 100:
                     frontiers.append(node)
                     break
-                   
+
+    if frontiers is None:
+        raise Exception("frontiers list is empty, you are done")
+    else:
+        return frontiers
+       
+def driveTo(node):
+    global pub_drive
+    pose = PoseStamped()
+
+    pose.header.frame_id = 'map'
+    pose.pose.position.x = node.x
+    pose.pose.position.y = node.y
+    pose.pose.position.z = 0
+
+    if theta is None:
+        quat = (0, 0, 0, 1)
+    else:
+        try:
+            quat = tf.transformations.quaternion_from_euler(0.0, 0.0, float(theta))
+        except Exception, e:
+            raise e
+
+    qx, qy, qz, qw = quat
+    pose.pose.orientation.x = qx
+    pose.pose.orientation.y = qy
+    pose.pose.orientation.z = qz
+    pose.pose.orientation.w = qw
+
+    pub_drive.publish(pose)
+    moving = True
+
+def startup():
+    ## this can be a rather complicated or simple maneuver
+    ## we can choose whatever we want
+    ## rotating is a complete circle, moving to a predefined set of points relatively close to the robot, etc.
+    pass
+
+def attemptRecover():
+    global frontiers
+    global moveError
+    startup()
+
+    try:
+        frontiers = findFrontiers()
+        moveError = False
+    except Exception, e:
+        pass
+
+    return
+
+
+def moveBaseResult(msg):
+    global moving
+    global moveError
+    result = msg.status.status
+    ## result tells us the state of the robot
+    ## 0 doesn't mean anything important to us
+    ## 1 means the robot is moving to its destination
+    ## 2 doesn't mean anything important to us
+    ## 3 means the robot has reached its destination
+    ## 4 means the robot cannot reach the destination 
+    if result == 1:
+        moving = True 
+        print "Robot is currently moving to its destination"
+    elif result == 3:
+        moving = False
+        print "Robot has reached its destination"
+    elif result == 4:
+        moving = False
+        moveError = True
+        print "There is an error moving to the destination"
+    else:
+        print "There was some unexpected result that we don't care about right now"
+
+## timer callback function
+## updates position, orientation and time of the system
+def tCallback(event):
+    
+    global pose
+    global theta
+
+    now = rospy.Time.now()
+
+    odom_list.waitForTransform('map', 'base_footprint', rospy.Time(0), rospy.Duration(1.0))
+    (position, orientation) = odom_list.lookupTransform('map','base_footprint', rospy.Time(0))
+    pose.position.x = position[0]
+    pose.position.y = position[1]
+
+    odomW = orientation
+    q = [odomW[0], odomW[1], odomW[2], odomW[3]]
+    roll, pitch, yaw = euler_from_quaternion(q)
+    #convert yaw to degrees
+    pose.orientation.z = yaw
+    theta = math.degrees(yaw)
 
 #Main handler of the project
 def run():
@@ -252,23 +273,63 @@ def run():
     global expand_pub
     global smallerNodeDict
     global smallerNodeDictCopy
+    global doneExploring
+    global moving
+    global moveError
+    global pose
+    global odom_list
+    global frontiers
   
     rospy.init_node('lab3')
     sub = rospy.Subscriber("/map", OccupancyGrid, mapCallBack)
     pub = rospy.Publisher("/map_check", GridCells, queue_size=1)  
-    pubpath = rospy.Publisher("/path", GridCells, queue_size=1) # you can use other types if desired
+    pubpath = rospy.Publisher("/path", GridCells, queue_size=1)
     pubway = rospy.Publisher("/waypoints", GridCells, queue_size=1)
     goal_sub = rospy.Subscriber('goal_lab3', PoseStamped, readGoal, queue_size=1) #change topic for best results
     start_sub = rospy.Subscriber('initpose', PoseWithCovarianceStamped, readStart, queue_size=1) #change topic for best results
     expand_pub = rospy.Publisher('/expand', GridCells, queue_size=1)
+    base_result_sub = rospy.Subscriber('/move_base/result', MoveBaseActionResult, moveBaseResult, queue_size=1)
+    pub_drive = rospy.Publisher('/move_base_simple/goal')
 
-    # wait a second for publisher, subscribers, and TF
-    rospy.sleep(6)
+    rospy.Timer(rospy.Duration(.01), tCallback) # timer callback for robot location
+    
+    odom_list = tf.TransformListener() #listener for robot location
 
-    while (1 and not rospy.is_shutdown()):
-        publishCells(smallerNodeDict, smallerNodeDictCopy) #publishing map data every 4 seconds
-        rospy.sleep(6) 
-        print("Complete")
+    rospy.sleep(5)
+
+## -----------------------------------------------------------------------------------------------------------
+## new main for the final
+
+    doneExploring = False
+    moving = False
+    moveError = False
+
+    ## make robot do startup spin maneuver here
+
+    rospy.sleep(5) ## waiting so we get the new mapData after the spin
+    ## TODO might also want to keep track of the frontiers that have failed
+    try: 
+
+        while (not doneExploring) and (not rospy.is_shutdown()):
+            frontiers = findFrontiers(); ## find frontiers
+            driveTo(frontiers[0]) ## TODO might need a better way of storing frontiers/iterating through them
+                                  ## maybe keeping failed frontiers in a list and avoiding them until they're the only ones left
+
+            ## wait until the robot is done moving or has a moveError
+            while moving and (not moveError) and (not rospy.is_shutdown()): 
+                rospy.sleep(0.1)
+
+            ## if there is a move error, we should try to recover and find the next open frontier
+            if moveError:
+                try:
+                    attemptRecover()
+                ## if we can't recover, that must mean we're done searching
+                except Exception, e:
+                    doneExploring = True 
+
+    except rospy.ROSInterruptException:
+        pass
+
 
 
 if __name__ == '__main__':
