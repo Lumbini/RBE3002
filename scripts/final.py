@@ -106,6 +106,18 @@ def mapCallBack(data):
                 neighborNode.data = 100
 
 
+ def BFS(grid, startNode):
+    frontiers = []
+    toExplore = []
+    toExplore.add(startNode.getAllNeighbors(grid))
+
+    while (frontiers is empty):
+        for neighbor in toExplore:
+            if (neighbor.data != -1 and neighbor.data != 100):
+                toExplore.append(neighbor.getAllNeighbors(grid))
+                toExplore.remove(neighbor)
+            else if (neighbor.data == -1):
+                frontiers.append(neighbor)
     
 
 ## should make a list of places bordering unknown space
