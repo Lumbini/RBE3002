@@ -159,7 +159,7 @@ def BFS(grid, startNode):
     while (frontiers is empty):
         for neighbor in toExplore:
             if (neighbor.data != -1 and neighbor.data != 100):
-                toExplore.extend(neighbor.getAllNeighbors(grid))
+                toExplore.append(neighbor.getAllNeighbors(grid))
                 toExplore.remove(neighbor)
             else if (neighbor.data == -1):
                 frontiers.append(neighbor)
