@@ -29,7 +29,6 @@ class Node:
                     ## get that node
 
                     tempPoint = OurPoint(x, y)
-
                     tempNode = grid[tempPoint]
                     #print "node in grid ", x, y, tempNode.data
                     ## if the node is not null, is not a wall, and is not unknown
@@ -52,8 +51,10 @@ class Node:
                 if (x >= (-self.width / 2) and x < self.width / 2) and (y >= (-self.width / 2) and y < (len(grid) / (2* self.width))) and (x != self.x or y != self.y):
                     ## get that node
                     tempPoint = OurPoint(x, y)
-
-                    tempNode = grid[tempPoint]
+                    if tempPoint in grid: 
+                        tempNode = grid[tempPoint]
+                    else:
+                        tempNode = None
                     #print "node in grid ", x, y, tempNode.data
                     ## if the node is not null, is not a wall, and is not unknown
                     if tempNode != None and tempNode.data != -1:

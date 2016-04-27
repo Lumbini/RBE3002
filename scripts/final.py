@@ -6,6 +6,7 @@ from std_msgs.msg import String
 from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, PoseWithCovarianceStamped
 from nav_msgs.msg import Odometry, OccupancyGrid
 from kobuki_msgs.msg import BumperEvent
+from tf.transformations import euler_from_quaternion
 from Node import Node
 import tf
 import numpy
@@ -13,7 +14,10 @@ import math
 import rospy, tf, numpy, math
 import copy
 from OurPoint import OurPoint
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionResult
 
+wheel_rad = 3.5 / 100.0 #cm
+wheel_base = 23.0 / 100.0 #cm
 
 # reads in global map
 def mapCallBack(data):
@@ -63,7 +67,7 @@ def mapCallBack(data):
         ypos = ypos  - (height / 6)
         point = OurPoint(xpos, ypos)
         node = Node(xpos, ypos, 0, smallerWidth)
-        print node
+        #print node
         smallerNodeDict[point] = node
 
     k = -1
@@ -78,19 +82,16 @@ def mapCallBack(data):
         #print neighbors
         if ((node.x - 1) % 3 == 0 and (node.y - 1) % 3 == 0):
             neighbors = node.getAllNeighbors(nodeDict)
+
             for neighbor in neighbors:
                 if(neighbor.data == 100):
 
                     xpos2 = math.ceil(node.x / 3)
                     ypos2 = math.ceil(node.y / 3)
-                    print neighbor.x, neighbor.y, smallerWidth, ypos2
+                    #print neighbor.x, neighbor.y, smallerWidth, ypos2
 
                     point2 = OurPoint(xpos2, ypos2)
-                    print point2
-                    if point2 in smallerNodeDict:
-                        print "exists", smallerNodeDict.get(point2)
-                    else:
-                        print "doesnt exist"
+                    #print point2
                     lowResNode = smallerNodeDict[point2]
                     lowResNode.data = 100
 	
@@ -106,7 +107,7 @@ def mapCallBack(data):
                 neighborNode.data = 100
 
 
- def BFS(grid, startNode):
+def BFS(grid, startNode):
     frontiers = []
     toExplore = []
     toExplore.add(startNode.getAllNeighbors(grid))
@@ -116,7 +117,7 @@ def mapCallBack(data):
             if (neighbor.data != -1 and neighbor.data != 100):
                 toExplore.append(neighbor.getAllNeighbors(grid))
                 toExplore.remove(neighbor)
-            else if (neighbor.data == -1):
+            elif (neighbor.data == -1):
                 frontiers.append(neighbor)
     
 
@@ -178,14 +179,41 @@ def publishTwist(lin_Vel, ang_Vel):
     msg = Twist()
     msg.linear.x = lin_Vel
     msg.angular.z = ang_Vel
-    pub.publish(msg)
+    pub_drive_startup.publish(msg)
 
 def startup():
     global pose
+    print "vroom vroom rotating"
     ## TODO make this more interesting maybe?
-    publishTwist(0.0, 0.2)
+    spinWheels(-0.04, 0.04, 3)
     rospy.sleep(2)
-    
+
+def spinWheels(u1, u2, time):
+    """This function accepts two wheel velocities and a time interval."""
+    print "SPinning"
+    global pub
+
+    r = wheel_rad
+    b = wheel_base
+    #compute wheel speeds
+    w = (u1 - u2)/b #Determines the angular velocity of base on the wheels.
+    if w == 0:
+        u = u1
+    else: 
+        u = w * ((b/2) * ((u1 + u2)/(u1-u2)))
+    start = rospy.Time().now().secs
+    #create movement and stop messages
+    move_msg = Twist() #creates a move_msg object inheriting type from the Twist() class
+    move_msg.linear.x = u #sets linear velocity
+    move_msg.angular.z = w #sets amgular velocity (Populates messages with data.)
+
+    stop_msg = Twist()
+    stop_msg.linear.x = 0
+    stop_msg.angular.z = 0
+    #publish move message for desired time
+    while(rospy.Time().now().secs - start < time and not rospy.is_shutdown()): # waits for said time and checks for ctrl C
+        pub_drive_startup.publish(move_msg) #publishes the move_msg
+    pub_drive_startup.publish(stop_msg)
 
 ## attempts to recover the robot after it says it cannot go to a frontier
 def attemptRecover():
@@ -260,8 +288,13 @@ def run():
     global frontiers
     global pub_drive
     global pub_drive_startup
-  
+
     rospy.init_node('final_turtlebot')
+
+    
+    pose = Pose()
+    print "got the init pose"
+
     sub = rospy.Subscriber("/map", OccupancyGrid, mapCallBack)
     pub = rospy.Publisher("/map_check", GridCells, queue_size=1)  
     base_result_sub = rospy.Subscriber('/move_base/result', MoveBaseActionResult, moveBaseResult, queue_size=1)
@@ -269,10 +302,12 @@ def run():
     pub_drive_startup = rospy.Publisher('/cmd_vel_mux/input/teleop', Twist, None, queue_size=10)
 
     rospy.Timer(rospy.Duration(.01), tCallback) # timer callback for robot location
-    
     odom_list = tf.TransformListener() #listener for robot location
 
-    rospy.sleep(5)
+
+    rospy.sleep(6)
+
+    print "after pubs and subs"
 
 ## -----------------------------------------------------------------------------------------------------------
 ## new main for the final
@@ -282,31 +317,32 @@ def run():
     moveError = False
 
     ## make robot do startup spin maneuver here
-    startup()
+    spinWheels(-0.5, 0.5, 3)
+    print "after startup"
 
-    rospy.sleep(5) ## waiting so we get the new mapData after the spin
-    ## TODO might also want to keep track of the frontiers that have failed
-    try: 
+    rospy.sleep(6) ## waiting so we get the new mapData after the spin
+    # ## TODO might also want to keep track of the frontiers that have failed
+    # try: 
 
-        while (not doneExploring) and (not rospy.is_shutdown()):
-            frontiers = findFrontiers(); ## find frontiers
-            driveTo(frontiers[0]) ## TODO might need a better way of storing frontiers/iterating through them
-                                  ## maybe keeping failed frontiers in a list and avoiding them until they're the only ones left
+    #     while (not doneExploring) and (not rospy.is_shutdown()):
+    #         frontiers = findFrontiers(); ## find frontiers
+    #         driveTo(frontiers[0]) ## TODO might need a better way of storing frontiers/iterating through them
+    #                               ## maybe keeping failed frontiers in a list and avoiding them until they're the only ones left
 
-            ## wait until the robot is done moving or has a moveError
-            while moving and (not moveError) and (not rospy.is_shutdown()): 
-                rospy.sleep(0.1)
+    #         ## wait until the robot is done moving or has a moveError
+    #         while moving and (not moveError) and (not rospy.is_shutdown()): 
+    #             rospy.sleep(0.1)
 
-            ## if there is a move error, we should try to recover and find the next open frontier
-            if moveError:
-                try:
-                    attemptRecover()
-                ## if we can't recover, that must mean we're done searching
-                except Exception, e:
-                    doneExploring = True 
+    #         ## if there is a move error, we should try to recover and find the next open frontier
+    #         if moveError:
+    #             try:
+    #                 attemptRecover()
+    #             ## if we can't recover, that must mean we're done searching
+    #             except Exception, e:
+    #                 doneExploring = True 
 
-    except rospy.ROSInterruptException:
-        pass
+    # except rospy.ROSInterruptException:
+    #     pass
 
 
 
