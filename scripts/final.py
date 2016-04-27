@@ -7,12 +7,10 @@ from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, PoseWithCovarianc
 from nav_msgs.msg import Odometry, OccupancyGrid
 from kobuki_msgs.msg import BumperEvent
 from Node import Node
-import Driving
 import tf
 import numpy
 import math 
 import rospy, tf, numpy, math
-import AStar
 import copy
 from OurPoint import OurPoint
 
@@ -32,6 +30,7 @@ def mapCallBack(data):
     global smallerNodeDict
     global smallerWidth
 
+    ## store data about the map
     mapgrid = data
     resolution = data.info.resolution
     mapData = data.data
@@ -40,6 +39,7 @@ def mapCallBack(data):
     offsetX = data.info.origin.position.x
     offsetY = data.info.origin.position.y
 
+    ## dictionary to store points and nodes
     nodeDict = {}
 
     ## parses the map into a dictionary
@@ -53,9 +53,10 @@ def mapCallBack(data):
 
     smallerWidth = int(math.floor(width / 3))
 
+    ## lets make the map lower resolution for speed sake
     smallerNodeDict = {}
 
-
+    ## make a smaller dictionary with nodes all at 0
     for i in range(0, len(mapData) / 9):
         ypos = int(math.floor(i / smallerWidth))
         xpos = int(i - (ypos * smallerWidth)) - (smallerWidth / 2)
@@ -67,6 +68,7 @@ def mapCallBack(data):
 
     k = -1
 
+    ## update this smaller dictionary with the actual values of the cells
     for key in nodeDict:
         
         node = nodeDict[key]
@@ -94,6 +96,7 @@ def mapCallBack(data):
 	
     smallerNodeDictCopy = copy.deepcopy(smallerNodeDict)
 
+    ## obstacle expansion
     for key in smallerNodeDictCopy:
         node = smallerNodeDict[key]
         if node.data == 100:
@@ -101,57 +104,6 @@ def mapCallBack(data):
                 point = OurPoint(neighbor.x, neighbor.y)
                 neighborNode = smallerNodeDictCopy[point]
                 neighborNode.data = 100
-
-
-
-def readGoal(goal):
-    global goalX	
-    global goalY
-    print 'hi'
- 
-    goalX = int(goal.pose.position.x / resolution)
-    goalY = int(goal.pose.position.y / resolution)
-    smallerX = int(math.ceil(goalX / 3))
-    smallerY = int(math.ceil(goalY / 3))
-    indexGoal = int(math.floor(goalX + (goalY * width)))
-    smallerIndex = smallerX + smallerY * smallerWidth
-
-    goalPoint = OurPoint(smallerX, smallerY)
-
-    #Convert the goal to a Node object
-    goalNode = Node(smallerX, smallerY, smallerNodeDictCopy[goalPoint], smallerWidth)
-    thisPath = AStar.AStar(startPosNode, goalNode, smallerNodeDictCopy)
-    print thisPath
-    waypoints = []
-    #waypoints.append(startPosNode)
-    waypoints.extend(reversed(AStar.getWaypoints(thisPath)))
-    waypoints.append(goalNode)
-
-    print "goal", goal.pose
-    publishPath(thisPath, waypoints)
-    for i in range(0, len(waypoints)):
-        newPoseX = waypoints[i].x * resolution
-        newPoseY = waypoints[i].y * resolution
-        newPose = Pose()
-        newPose.position.x = newPoseX
-        newPose.position.y = newPoseY
-
-def readStart(startPos):
-    global startPosX
-    global startPosY
-    global startPosNode
-
-    startPosX = int(startPos.pose.pose.position.x / resolution)
-    startPosY = int(startPos.pose.pose.position.y / resolution)
-    indexStart = int(math.floor(startPosX + (startPosY * width)))
-    smallerX = int(math.ceil(startPosX / 3))
-    smallerY = int(math.ceil(startPosY / 3))
-    smallerIndex = smallerX + smallerY * smallerWidth
-
-    startPoint = OurPoint(smallerX, smallerY)
-    #Cconvert start node to a Node Object. 
-    startPosNode = Node(smallerX, smallerY, smallerNodeDictCopy[startPoint].data, smallerWidth)
-    print "start ", startPos.pose.pose
 
 
 ## should make a list of places bordering unknown space
@@ -175,15 +127,18 @@ def findFrontiers(grid):
     else:
         return frontiers
        
+## publishes a message to drive to this node
 def driveTo(node):
     global pub_drive
-    pose = PoseStamped()
+    msg = PoseStamped()
 
-    pose.header.frame_id = 'map'
-    pose.pose.position.x = node.x
-    pose.pose.position.y = node.y
-    pose.pose.position.z = 0
+    ## set up header and position
+    msg.header.frame_id = 'map'
+    msg.pose.position.x = node.x
+    msg.pose.position.y = node.y
+    msg.pose.position.z = 0
 
+    ## quaternion wizardry
     if theta is None:
         quat = (0, 0, 0, 1)
     else:
@@ -192,35 +147,48 @@ def driveTo(node):
         except Exception, e:
             raise e
 
+    ## set up the orientation based on the quaternion calculations
     qx, qy, qz, qw = quat
-    pose.pose.orientation.x = qx
-    pose.pose.orientation.y = qy
-    pose.pose.orientation.z = qz
-    pose.pose.orientation.w = qw
+    msg.pose.orientation.x = qx
+    msg.pose.orientation.y = qy
+    msg.pose.orientation.z = qz
+    msg.pose.orientation.w = qw
 
-    pub_drive.publish(pose)
+    ## publish the message and set moving state
+    pub_drive.publish(msg)
     moving = True
 
-def startup():
-    ## this can be a rather complicated or simple maneuver
-    ## we can choose whatever we want
-    ## rotating is a complete circle, moving to a predefined set of points relatively close to the robot, etc.
-    pass
+def publishTwist(lin_Vel, ang_Vel):
+    """Send a movement (twist) message."""
+    global pub_drive_startup
+    msg = Twist()
+    msg.linear.x = lin_Vel
+    msg.angular.z = ang_Vel
+    pub.publish(msg)
 
+def startup():
+    global pose
+    ## TODO make this more interesting maybe?
+    publishTwist(0.0, 0.2)
+    rospy.sleep(2)
+    
+
+## attempts to recover the robot after it says it cannot go to a frontier
 def attemptRecover():
     global frontiers
     global moveError
+    ## do our startup maneuver again just in case
     startup()
-
+    ## try to find a fontier and go there
     try:
         frontiers = findFrontiers()
         moveError = False
-    except Exception, e:
-        pass
+    except Exception, e: ## if we can't find a frontier
+        raise e ## this exception will cause the robot to stop exploring, we must be done if we can't recover
 
     return
 
-
+## keeps track of the robot state
 def moveBaseResult(msg):
     global moving
     global moveError
@@ -268,9 +236,6 @@ def tCallback(event):
 #Main handler of the project
 def run():
     global pub
-    global pubpath
-    global pubway
-    global expand_pub
     global smallerNodeDict
     global smallerNodeDictCopy
     global doneExploring
@@ -279,17 +244,15 @@ def run():
     global pose
     global odom_list
     global frontiers
+    global pub_drive
+    global pub_drive_startup
   
-    rospy.init_node('lab3')
+    rospy.init_node('final_turtlebot')
     sub = rospy.Subscriber("/map", OccupancyGrid, mapCallBack)
     pub = rospy.Publisher("/map_check", GridCells, queue_size=1)  
-    pubpath = rospy.Publisher("/path", GridCells, queue_size=1)
-    pubway = rospy.Publisher("/waypoints", GridCells, queue_size=1)
-    goal_sub = rospy.Subscriber('goal_lab3', PoseStamped, readGoal, queue_size=1) #change topic for best results
-    start_sub = rospy.Subscriber('initpose', PoseWithCovarianceStamped, readStart, queue_size=1) #change topic for best results
-    expand_pub = rospy.Publisher('/expand', GridCells, queue_size=1)
     base_result_sub = rospy.Subscriber('/move_base/result', MoveBaseActionResult, moveBaseResult, queue_size=1)
-    pub_drive = rospy.Publisher('/move_base_simple/goal')
+    pub_drive = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=10) ## TODO check this type
+    pub_drive_startup = rospy.Publisher('/cmd_vel_mux/input/teleop', Twist, None, queue_size=10)
 
     rospy.Timer(rospy.Duration(.01), tCallback) # timer callback for robot location
     
@@ -305,6 +268,7 @@ def run():
     moveError = False
 
     ## make robot do startup spin maneuver here
+    startup()
 
     rospy.sleep(5) ## waiting so we get the new mapData after the spin
     ## TODO might also want to keep track of the frontiers that have failed
