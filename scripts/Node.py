@@ -57,7 +57,7 @@ class Node:
                         tempNode = None
                     #print "node in grid ", x, y, tempNode.data
                     ## if the node is not null, is not a wall, and is not unknown
-                    if tempNode != None and tempNode.data != -1:
+                    if tempNode != None: #and tempNode.data != -1:
 
                         ## append this node to our neighbors list
                         #print "node is neighbor"

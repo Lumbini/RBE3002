@@ -107,19 +107,62 @@ def mapCallBack(data):
                 neighborNode.data = 100
 
 
-def BFS(grid, startNode):
+def BFS(grid):
+    global frontiers
+    global pose
+    print "in BFS"
+    startPoint = OurPoint(int(math.floor(pose.position.x)), int(math.floor(pose.position.y)))
+    print startPoint
+    if startPoint in smallerNodeDictCopy:
+        startNode = smallerNodeDictCopy[startPoint]
+    else:
+        print "fuck yo point"
+        return
     frontiers = []
     toExplore = []
-    toExplore.add(startNode.getAllNeighbors(grid))
+    visited = []
+    startingNeighbors = startNode.getAllNeighbors(grid)
+    for node in startingNeighbors:
+        toExplore.append(node)
 
-    while (frontiers is empty):
+    while (len(frontiers) == 0):
         for neighbor in toExplore:
+            publishCell(neighbor)
             if (neighbor.data != -1 and neighbor.data != 100):
-                toExplore.append(neighbor.getAllNeighbors(grid))
+                neighborList = neighbor.getAllNeighbors(grid)
                 toExplore.remove(neighbor)
+                visited.append(neighbor)
+                for node in neighborList:
+                    if node not in visited:
+                        toExplore.append(node)
             elif (neighbor.data == -1):
                 frontiers.append(neighbor)
+                break
+    print "leaving BFS"
     
+
+def publishCell(node):
+    global pub
+    global offsetY
+    global offsetX
+
+    print "publishing"
+
+    # resolution and offset of the map
+    k=0
+    cells = GridCells()
+    cells.header.frame_id = 'map'
+    cells.cell_width = resolution*3
+    cells.cell_height = resolution*3
+
+    point=Point()
+    point.x=(node.x*resolution*3)+offsetX + (0.5* resolution*3) # added secondary offset 
+    point.y=(node.y*resolution*3)+offsetY - (-0.5 * resolution*3) # added secondary offset ... Magic ?
+    point.z=0
+    cells.cells.append(point)
+        
+    #print cells.cells
+    pub.publish(cells)   
 
 ## should make a list of places bordering unknown space
 ## this can become much more interesting if we want, using a labeling algorithm to identify spaces and then we can find the centroid of the space
@@ -145,6 +188,7 @@ def findFrontiers(grid):
 ## publishes a message to drive to this node
 def driveTo(node):
     global pub_drive
+    global theta
     msg = PoseStamped()
 
     ## set up header and position
@@ -301,11 +345,11 @@ def run():
     pub_drive = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=10) ## TODO check this type
     pub_drive_startup = rospy.Publisher('/cmd_vel_mux/input/teleop', Twist, None, queue_size=10)
 
-    rospy.Timer(rospy.Duration(.01), tCallback) # timer callback for robot location
     odom_list = tf.TransformListener() #listener for robot location
+    rospy.Timer(rospy.Duration(.01), tCallback) # timer callback for robot location
 
 
-    rospy.sleep(6)
+    rospy.sleep(3)
 
     print "after pubs and subs"
 
@@ -317,10 +361,13 @@ def run():
     moveError = False
 
     ## make robot do startup spin maneuver here
-    spinWheels(-0.5, 0.5, 3)
+    spinWheels(-0.2, 0.2, 3)
     print "after startup"
 
-    rospy.sleep(6) ## waiting so we get the new mapData after the spin
+    rospy.sleep(4) ## waiting so we get the new mapData after the spin
+    startingPoint = OurPoint(pose.position.x, pose.position.y)
+    BFS(smallerNodeDictCopy)
+    print frontiers
     # ## TODO might also want to keep track of the frontiers that have failed
     # try: 
 
