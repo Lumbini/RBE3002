@@ -38,6 +38,7 @@ def mapCallBack(data):
     global offsetY
     global nodeDict
     global frontiers
+    global extendedFrontiers
 
     ## store data about the map
     mapgrid = data
@@ -51,6 +52,7 @@ def mapCallBack(data):
     ## dictionary to store points and nodes
     nodeDict = {}
     frontiers = []
+    extendedFrontiers = []
 
     ## parses the map into a dictionary
     for i in range(0, len(mapData)):
@@ -71,6 +73,58 @@ def mapCallBack(data):
                     frontiers.append(neighbor)
                     break
 
+    ## Finds extended driving points that are all 0 space
+    for node in frontiers:
+        if node.data != 0:
+            robotPoint = OurPoint(pose.position.x, pose.position.y)
+            if node.x > robotPoint.x:
+                if node.y > robotPoint.y:
+                    for i in range(robotPoint.x, node.x + 1):
+                        if extendedFrontiersHelper(i, j, nodeDict):
+                            extendedFrontiers.append(nodeDict[OurPoint(i, j)])
+                            #break
+                    for j in range(robotPoint.y, node.y + 1):
+                        if extendedFrontiersHelper(i, j, nodeDict):
+                            extendedFrontiers.append(nodeDict[OurPoint(i, j)])
+                            #break
+                else:
+                    for i in range(robotPoint.x, node.x + 1):
+                        if extendedFrontiersHelper(i, j, nodeDict):
+                            extendedFrontiers.append(nodeDict[OurPoint(i, j)])
+                            #break
+                    for j in range(node.y, robotPoint.y + 1):
+                        if extendedFrontiersHelper(i, j, nodeDict):
+                            extendedFrontiers.append(nodeDict[OurPoint(i, j)])
+                            #break
+            else:
+                if node.y > robotPoint.y:
+                    for i in range(node.x, robotPoint.x + 1):
+                        if extendedFrontiersHelper(i, j, nodeDict):
+                            extendedFrontiers.append(nodeDict[OurPoint(i, j)])
+                            #break
+                    for j in range(robotPoint.y, node.y + 1):
+                        if extendedFrontiersHelper(i, j, nodeDict):
+                            extendedFrontiers.append(nodeDict[OurPoint(i, j)])
+                            #break
+
+                else:
+                    for i in range(node.x, robot.x + 1):
+                        if extendedFrontiersHelper(i, j, nodeDict):
+                            extendedFrontiers.append(nodeDict[OurPoint(i, j)])
+                            #break
+                    for j in range(node.y, robotPoint.y + 1):
+                        if extendedFrontiersHelper(i, j, nodeDict):
+                            extendedFrontiers.append(nodeDict[OurPoint(i, j)])
+                            #break
+
+
+
+def extendedFrontiersHelper(i, j, grid):
+    thisNode = grid[OurPoint(i, j)]
+    if thisNode.data == 0:
+        return True
+    else:
+        return False
 
 
 def timerCallback(event):
@@ -103,7 +157,7 @@ Frontier functions
 --------------------------------------------------------------------------------------------
 """
 
-def findFrontiers():
+def findFrontiers(frontierList):
 
     """
     Find Frontiers
@@ -111,20 +165,19 @@ def findFrontiers():
     Gets this frontier from the list of frontiers
     """
 
-    global frontiers
-    global failedList
+    # global failedList
 
-    if len(frontiers) == 0:
+    if len(frontierList) == 0:
         # raise Exception("frontiers list is empty, you are done")
         print "Frontiers list is empty. You must be done searching!"
     else:
 
-        toreturn = frontiers[0]
-        frontiers.pop(0)
+        toreturn = frontierList[0]
+        frontierList.pop(0)
         ##robot tried to get to places at least twice
-        if toreturn not in failedList:
-            frontiers.append(toreturn)
-            failedList.append(toreturn)
+        # if toreturn not in failedList:
+        #     frontierList.append(toreturn)
+        #     failedList.append(toreturn)
         return toreturn
 
 """
@@ -191,8 +244,8 @@ def publishCells(nodes, publisher):
 
     for node in nodes:
         point=Point()
-        point.x = (node.x * resolution) - offsetX #+ (0.30 / resolution)
-        point.y = (node.y * resolution) + offsetY #+ (0.44 / resolution)
+        point.x = (node.x * resolution) - offsetX + (0.30 / resolution)
+        point.y = (node.y * resolution) + offsetY + (0.44 / resolution)
         point.z = 0
         cells.cells.append(point)
 
@@ -235,27 +288,36 @@ def run():
 
     spinWheels(-0.15, 0.15, 5, pub_drive_startup)
 
-    rospy.sleep(4)
+    rospy.sleep(3)
 
     print "Entering startup\n"
     print "Driving to startup position 1"
-    nav_node.goto_point(0.5, 0.0)
+    nav_node.goto_point(1.0, 0.0)
     print "Driving to startup position 2"
-    nav_node.goto_point(0.0, 0.5)
+    nav_node.goto_point(0.0, 1.0)
     print "Driving to startup position 3"
-    nav_node.goto_point(0.5, 0.5)
+    nav_node.goto_point(1.0, 1.0)
     print "Driving to startup position 4"
-    nav_node.goto_point(-0.5, -0.5)
+    nav_node.goto_point(-1.0, -1.0)
 
     print "\nAfter startup maneuver\n"
 
-    while len(frontiers) > 0 and not (rospy.is_shutdown()):
-        publishCells(frontiers, pub_frontiers)
-        frontier = findFrontiers()
-        nav_node.goto_point(float(frontier.x * resolution), float(frontier.y * resolution))
+    while (len(extendedFrontiers) > 0 or len(frontiers) > 0) and not (rospy.is_shutdown()):
+        while len(extendedFrontiers) > 0 and not (rospy.is_shutdown()):
+            publishCells(frontiers, pub_frontiers)
+            publishCells(extendedFrontiers, pub_frontiers)
+            frontier = findFrontiers(extendedFrontiers)
+            nav_node.goto_point(float(frontier.x * resolution), float(frontier.y * resolution))
+
+        while len(frontiers) > 0 and not (rospy.is_shutdown()):
+            publishCells(frontiers, pub_frontiers)
+            publishCells(extendedFrontiers, pub_frontiers)
+            frontier = findFrontiers(frontiers)
+            nav_node.goto_point(float(frontier.x * resolution), float(frontier.y * resolution))
 
     print "Done exploring"
-    print frontiers
+    print "Frontiers: ", frontiers
+    print "Extended frontiers", extendedFrontiers
 
 if __name__ == '__main__':
     try:
