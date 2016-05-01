@@ -17,23 +17,26 @@ from OurPoint import OurPoint
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionResult
 from action_nav import NavNode
 
-wheel_rad = 3.5 / 100.0 #cm
-wheel_base = 23.0 / 100.0 #cm
+"""
+Callback functions
+--------------------------------------------------------------------------------------------
+"""
 
-# reads in global map
 def mapCallBack(data):
-    print("map callback")
-    global mapData
-    global width
-    global height
-    global mapgrid
+
+    """
+    Map callback
+    Triggers everytime something is published to the /map topic
+    Updates our local map data in our dictionary
+    Updates the list of frontiers
+    """
+
+    print("Updating map")
+
     global resolution
     global offsetX
     global offsetY
-    global smallerNodeDictCopy
     global nodeDict
-    global smallerNodeDict
-    global smallerWidth
     global frontiers
 
     ## store data about the map
@@ -61,23 +64,59 @@ def mapCallBack(data):
     ## Find all possible frontiers in the given map. 
     for key in nodeDict:
         node = nodeDict[key]
-        neighbors = node.getAllNeighbors(nodeDict)
         if node.data == -1:
+            neighbors = node.getAllNeighbors(nodeDict)
             for neighbor in neighbors:
-                if neighbor.data != -1 and neighbor.data != 100:
+                if neighbor.data != -1 and neighbor.data != 100 and (neighbor not in frontiers):
                     frontiers.append(neighbor)
                     break
-   
 
-## should make a list of places bordering unknown space
-## this can become much more interesting if we want, using a labeling algorithm to identify spaces and then we can find the centroid of the space
+
+
+def timerCallback(event):
+    
+    """
+    Timer Callback
+    Executes every 1ms to update the position and orientation of the robot
+    Uses odom and tf to do so
+    """
+
+    global pose
+    global theta
+
+    now = rospy.Time.now()
+
+    odom_list.waitForTransform('map', 'base_footprint', rospy.Time(0), rospy.Duration(2.0))
+    (position, orientation) = odom_list.lookupTransform('map','base_footprint', rospy.Time(0))
+    pose.position.x = position[0]
+    pose.position.y = position[1]
+
+    odomW = orientation
+    q = [odomW[0], odomW[1], odomW[2], odomW[3]]
+    roll, pitch, yaw = euler_from_quaternion(q)
+    #convert yaw to degrees
+    pose.orientation.z = yaw
+    theta = math.degrees(yaw)
+   
+"""
+Frontier functions
+--------------------------------------------------------------------------------------------
+"""
+
 def findFrontiers():
+
+    """
+    Find Frontiers
+    Returns one frontier for the robot to try to drive to
+    Gets this frontier from the list of frontiers
+    """
+
     global frontiers
     global failedList
 
     if len(frontiers) == 0:
         # raise Exception("frontiers list is empty, you are done")
-        print "frontiers is empty 2"
+        print "Frontiers list is empty. You must be done searching!"
     else:
 
         toreturn = frontiers[0]
@@ -88,23 +127,23 @@ def findFrontiers():
             failedList.append(toreturn)
         return toreturn
 
-       
-def publishTwist(lin_Vel, ang_Vel):
-    """Send a movement (twist) message."""
-    global pub_drive_startup
-    msg = Twist()
-    msg.linear.x = lin_Vel
-    msg.angular.z = ang_Vel
-    pub_drive_startup.publish(msg)
+"""
+Driving functions
+--------------------------------------------------------------------------------------------
+"""
 
+def spinWheels(u1, u2, time, publisher):
 
-def spinWheels(u1, u2, time):
-    """This function accepts two wheel velocities and a time interval."""
-    print "Spinning"
-    global pub
+    """
+    Spin Wheels
+    Accepts two wheel velocities and a time interval
+    Publishes a movement message that executes that motion for that time
+    """
 
-    r = wheel_rad
-    b = wheel_base
+    print "Spinning in spinWheels"
+
+    r = 3.5 / 100.0
+    b = 23.0 / 100.0
     #compute wheel speeds
     w = (u1 - u2)/b #Determines the angular velocity of base on the wheels.
     if w == 0:
@@ -122,15 +161,26 @@ def spinWheels(u1, u2, time):
     stop_msg.angular.z = 0
     #publish move message for desired time
     while(rospy.Time().now().secs - start < time and not rospy.is_shutdown()): # waits for said time and checks for ctrl C
-        pub_drive_startup.publish(move_msg) #publishes the move_msg
-    pub_drive_startup.publish(stop_msg)
+        publisher.publish(move_msg) #publishes the move_msg
+    publisher.publish(stop_msg)
 
-def publishCells(nodes):
-    global pub_frontiers
+"""
+RViz functions
+--------------------------------------------------------------------------------------------
+"""
+
+def publishCells(nodes, publisher):
+
+    """
+    Publish Cells
+    Publishes a list of nodes as GridCells to RViz
+    Uses the given publisher
+    """
+
     global offsetY
     global offsetX
 
-    print "publishing"
+    print "publishing frontiers"
 
     # resolution and offset of the map
     k=0
@@ -141,90 +191,71 @@ def publishCells(nodes):
 
     for node in nodes:
         point=Point()
-        point.x = (node.x * resolution) - offsetX + (0.30 / resolution) # added secondary offset 
-        point.y = (node.y * resolution) + offsetY + (0.44 / resolution) # added secondary offset ... Magic ?
+        point.x = (node.x * resolution) - offsetX #+ (0.30 / resolution)
+        point.y = (node.y * resolution) + offsetY #+ (0.44 / resolution)
         point.z = 0
         cells.cells.append(point)
 
-    pub_frontiers.publish(cells)
+    publisher.publish(cells)
 
-## timer callback function
-## updates position, orientation and time of the system
-def tCallback(event):
-    
-    global pose
-    global theta
-
-    now = rospy.Time.now()
-
-    odom_list.waitForTransform('map', 'base_footprint', rospy.Time(0), rospy.Duration(2.0))
-    (position, orientation) = odom_list.lookupTransform('map','base_footprint', rospy.Time(0))
-    pose.position.x = position[0]
-    pose.position.y = position[1]
-
-    odomW = orientation
-    q = [odomW[0], odomW[1], odomW[2], odomW[3]]
-    roll, pitch, yaw = euler_from_quaternion(q)
-    #convert yaw to degrees
-    pose.orientation.z = yaw
-    theta = math.degrees(yaw)
+"""
+Main function
+--------------------------------------------------------------------------------------------
+"""
 
 #Main handler of the project
 def run():
-    global pub
-    global smallerNodeDict
-    global smallerNodeDictCopy
-    global doneExploring
-    global moving
-    global moveError
+
+    """
+    Run
+    Run is basically our main
+    """
+
     global pose
     global odom_list
-    global pub_drive_startup
     global frontier
     global frontiers
     global failedList
-    global pub_frontiers
-
-    nav_node = NavNode()
 
     failedList = []
 
-    #rospy.init_node('final_turtlebot')
-
+    nav_node = NavNode()
     pose = Pose()
 
     sub = rospy.Subscriber("/map", OccupancyGrid, mapCallBack)
     pub_frontiers = rospy.Publisher("/frontiers", GridCells, queue_size=1)  
     pub_drive_startup = rospy.Publisher('/cmd_vel_mux/input/teleop', Twist, None, queue_size=10)
 
+    print "Set up publisher and subscribers"
 
-    odom_list = tf.TransformListener() #listener for robot location
-    rospy.Timer(rospy.Duration(.01), tCallback) # timer callback for robot location
-
+    odom_list = tf.TransformListener()
+    rospy.Timer(rospy.Duration(.01), timerCallback)
 
     rospy.sleep(3)
 
-    print "after pubs and subs"
+    spinWheels(-0.15, 0.15, 5, pub_drive_startup)
 
-    doneExploring = False
-    moving = False
-    moveError = False
+    rospy.sleep(4)
 
-    ## make robot do startup spin maneuver here
-    spinWheels(-0.2, 0.2, 5)
-    print "after startup"
+    print "Entering startup\n"
+    print "Driving to startup position 1"
+    nav_node.goto_point(0.5, 0.0)
+    print "Driving to startup position 2"
+    nav_node.goto_point(0.0, 0.5)
+    print "Driving to startup position 3"
+    nav_node.goto_point(0.5, 0.5)
+    print "Driving to startup position 4"
+    nav_node.goto_point(-0.5, -0.5)
 
-    rospy.sleep(4) ## waiting so we get the new mapData after the spin
+    print "\nAfter startup maneuver\n"
 
-    # nav_node.goto_point(1.0, 0.0)
-    # nav_node.goto_point(0.0, 1.0)
-    # nav_node.goto_point(1.0, 1.0)
-    # nav_node.goto_point(-1.0, -1.0)
-    # nav_node.goto_point(0.0, 0.0)
     while len(frontiers) > 0 and not (rospy.is_shutdown()):
-        publishCells(frontiers)
+        publishCells(frontiers, pub_frontiers)
         frontier = findFrontiers()
         nav_node.goto_point(float(frontier.x * resolution), float(frontier.y * resolution))
+
+    print "Done exploring"
+    print frontiers
 
 if __name__ == '__main__':
     try:
