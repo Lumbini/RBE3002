@@ -51,8 +51,8 @@ def mapCallBack(data):
 
     ## dictionary to store points and nodes
     nodeDict = {}
-    frontiers = []
-    extendedFrontiers = []
+    #frontiers = []
+    #extendedFrontiers = []
 
     ## parses the map into a dictionary
     for i in range(0, len(mapData)):
@@ -82,40 +82,40 @@ def mapCallBack(data):
                     for i in range(robotPoint.x, node.x + 1):
                         if extendedFrontiersHelper(i, j, nodeDict):
                             extendedFrontiers.append(nodeDict[OurPoint(i, j)])
-                            #break
+                            break
                     for j in range(robotPoint.y, node.y + 1):
                         if extendedFrontiersHelper(i, j, nodeDict):
                             extendedFrontiers.append(nodeDict[OurPoint(i, j)])
-                            #break
+                            break
                 else:
                     for i in range(robotPoint.x, node.x + 1):
                         if extendedFrontiersHelper(i, j, nodeDict):
                             extendedFrontiers.append(nodeDict[OurPoint(i, j)])
-                            #break
+                            break
                     for j in range(node.y, robotPoint.y + 1):
                         if extendedFrontiersHelper(i, j, nodeDict):
                             extendedFrontiers.append(nodeDict[OurPoint(i, j)])
-                            #break
+                            break
             else:
                 if node.y > robotPoint.y:
                     for i in range(node.x, robotPoint.x + 1):
                         if extendedFrontiersHelper(i, j, nodeDict):
                             extendedFrontiers.append(nodeDict[OurPoint(i, j)])
-                            #break
+                            break
                     for j in range(robotPoint.y, node.y + 1):
                         if extendedFrontiersHelper(i, j, nodeDict):
                             extendedFrontiers.append(nodeDict[OurPoint(i, j)])
-                            #break
+                            break
 
                 else:
-                    for i in range(node.x, robot.x + 1):
+                    for i in range(node.x, robotPoint.x + 1):
                         if extendedFrontiersHelper(i, j, nodeDict):
                             extendedFrontiers.append(nodeDict[OurPoint(i, j)])
-                            #break
+                            break
                     for j in range(node.y, robotPoint.y + 1):
                         if extendedFrontiersHelper(i, j, nodeDict):
                             extendedFrontiers.append(nodeDict[OurPoint(i, j)])
-                            #break
+                            break
 
 
 
@@ -174,10 +174,10 @@ def findFrontiers(frontierList):
 
         toreturn = frontierList[0]
         frontierList.pop(0)
-        ##robot tried to get to places at least twice
-        # if toreturn not in failedList:
-        #     frontierList.append(toreturn)
-        #     failedList.append(toreturn)
+        while toreturn in failedList:
+            toreturn = frontierList[0]
+            frontierList.pop(0)
+        failedList.append(toreturn)
         return toreturn
 
 """
@@ -269,8 +269,11 @@ def run():
     global frontier
     global frontiers
     global failedList
+    global extendedFrontiers
 
     failedList = []
+    extendedFrontiers = []
+    frontiers = []
 
     nav_node = NavNode()
     pose = Pose()
@@ -294,11 +297,19 @@ def run():
     print "Driving to startup position 1"
     nav_node.goto_point(1.0, 0.0)
     print "Driving to startup position 2"
-    nav_node.goto_point(0.0, 1.0)
+    nav_node.goto_point(1.0, -1.0)
     print "Driving to startup position 3"
-    nav_node.goto_point(1.0, 1.0)
+    nav_node.goto_point(0.0, -1.0)
     print "Driving to startup position 4"
     nav_node.goto_point(-1.0, -1.0)
+    print "Driving to startup position 5"
+    nav_node.goto_point(-1.0, 0.0)
+    print "Driving to startup position 6"
+    nav_node.goto_point(-1.0, 1.0)
+    print "Driving to startup position 7"
+    nav_node.goto_point(0.0, 1.0)
+    print "Driving to startup position 8"
+    nav_node.goto_point(1.0, 1.0)
 
     print "\nAfter startup maneuver\n"
 
@@ -314,6 +325,8 @@ def run():
             publishCells(extendedFrontiers, pub_frontiers)
             frontier = findFrontiers(frontiers)
             nav_node.goto_point(float(frontier.x * resolution), float(frontier.y * resolution))
+
+        failedList = []
 
     print "Done exploring"
     print "Frontiers: ", frontiers
