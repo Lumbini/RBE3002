@@ -51,8 +51,8 @@ def mapCallBack(data):
 
     ## dictionary to store points and nodes
     nodeDict = {}
-    #frontiers = []
-    #extendedFrontiers = []
+    frontiers = []
+    extendedFrontiers = []
 
     ## parses the map into a dictionary
     for i in range(0, len(mapData)):
@@ -77,6 +77,7 @@ def mapCallBack(data):
     for node in frontiers:
         if node.data != 0:
             robotPoint = OurPoint(pose.position.x, pose.position.y)
+            frontiers.remove(node)
             if node.x > robotPoint.x:
                 if node.y > robotPoint.y:
                     for i in range(robotPoint.x, node.x + 1):
@@ -319,12 +320,14 @@ def run():
             publishCells(extendedFrontiers, pub_frontiers)
             frontier = findFrontiers(extendedFrontiers)
             nav_node.goto_point(float(frontier.x * resolution), float(frontier.y * resolution))
+            print "Remaining Extended Frontiers: ", len(extendedFrontiers)
 
         while len(frontiers) > 0 and not (rospy.is_shutdown()):
             publishCells(frontiers, pub_frontiers)
             publishCells(extendedFrontiers, pub_frontiers)
             frontier = findFrontiers(frontiers)
             nav_node.goto_point(float(frontier.x * resolution), float(frontier.y * resolution))
+            print "Remaining Frontiers: ", len(frontiers)
 
         failedList = []
 
