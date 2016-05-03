@@ -244,8 +244,8 @@ def publishCells(nodes, publisher):
 
     for node in nodes:
         point=Point()
-        point.x = (node.x * resolution) - offsetX + (0.30 / resolution)
-        point.y = (node.y * resolution) + offsetY + (0.44 / resolution)
+        point.x = (node.x * resolution) + offsetX + (0.72 / resolution)
+        point.y = (node.y * resolution) + offsetY + (0.643 / resolution)
         point.z = 0
         cells.cells.append(point)
 
