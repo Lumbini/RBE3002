@@ -168,18 +168,17 @@ def findFrontiers(frontierList):
 
     # global failedList
 
-    if len(frontierList) == 0:
-        # raise Exception("frontiers list is empty, you are done")
-        print "Frontiers list is empty. You must be done searching!"
-    else:
-
+    if len(frontierList) > 0:
         toreturn = frontierList[0]
         frontierList.pop(0)
-        while toreturn in failedList:
+        while toreturn in failedList and len(frontierList) > 0:
             toreturn = frontierList[0]
             frontierList.pop(0)
-        failedList.append(toreturn)
+            failedList.append(toreturn)
+            
         return toreturn
+    else:
+        print "Frontiers list is empty. You must be done searching!"
 
 """
 Driving functions
